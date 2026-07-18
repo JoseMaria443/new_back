@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 from typing import List, Optional
 
-from ..domain.entities import Empleado, HistorialEstatus
+from ..entities import Empleado, HistorialEstatus
 
 
 class EmpleadoRepository(ABC):

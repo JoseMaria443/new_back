@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 from typing import List, Optional
 
-from ..domain.entities import (
+from ..entities import (
     Area,
     Cargo,
     TipoComunicado,
