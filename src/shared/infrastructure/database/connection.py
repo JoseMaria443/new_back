@@ -1,9 +1,11 @@
 """
 Gestión de conexión a base de datos usando SQLAlchemy Core.
 No se usa ORM, solo el motor de conexión y SQL crudo.
+Provee sesiones para transacciones ACID.
 """
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
 from typing import Generator
 
@@ -14,9 +16,11 @@ class DatabaseConnection:
     """
     Adaptador de conexión a base de datos.
     Usa SQLAlchemy Core sin ORM.
+    Provee sesiones para transacciones ACID.
     """
     
     _engine: Engine = None
+    _session_factory = None
     
     @classmethod
     def get_engine(cls) -> Engine:
@@ -29,6 +33,35 @@ class DatabaseConnection:
                 pool_recycle=3600
             )
         return cls._engine
+    
+    @classmethod
+    def get_session_factory(cls):
+        """Obtiene o crea el factory de sesiones."""
+        if cls._session_factory is None:
+            cls._session_factory = sessionmaker(
+                bind=cls.get_engine(),
+                class_=Session,
+                expire_on_commit=False
+            )
+        return cls._session_factory
+    
+    @classmethod
+    @contextmanager
+    def get_session(cls) -> Generator[Session, None, None]:
+        """
+        Context manager para obtener una sesión con transacciones ACID.
+        Uso: with DatabaseConnection.get_session() as session:
+        """
+        session_factory = cls.get_session_factory()
+        session = session_factory()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
     
     @classmethod
     @contextmanager
@@ -47,3 +80,4 @@ class DatabaseConnection:
         if cls._engine:
             cls._engine.dispose()
             cls._engine = None
+            cls._session_factory = None

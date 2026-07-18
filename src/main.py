@@ -2,10 +2,17 @@
 Punto de entrada principal de la aplicación.
 Configura y ejecuta el servidor FastAPI.
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from config.settings import settings
+from shared.infrastructure.security.rate_limiter import (
+    rate_limit_exception_handler,
+    limiter,
+)
 
 # Crear la aplicación FastAPI
 app = FastAPI(
@@ -14,12 +21,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configurar CORS
+# Configurar rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
+
+# Configurar CORS - dominio del frontend Next.js
+# En producción, se debe especificar el origen exacto
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar los orígenes permitidos
+    allow_origins=[
+        "http://localhost:3000",  # Next.js dev
+        "http://127.0.0.1:3000",
+        "https://*.vercel.app",  # Next.js en Vercel
+        "https://*.netlify.app",  # Next.js en Netlify
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -34,6 +51,9 @@ from modules.catalogos.infrastructure.entrypoints.api import (
     estado_tarea_router,
 )
 
+# Router del módulo de personal
+from modules.personal.infrastructure.entrypoints.api import empleado_router
+
 # Registrar routers
 app.include_router(area_router)
 app.include_router(cargo_router)
@@ -42,6 +62,7 @@ app.include_router(medio_recepcion_router)
 app.include_router(rol_destinatario_router)
 app.include_router(rol_responsable_router)
 app.include_router(estado_tarea_router)
+app.include_router(empleado_router)
 
 
 @app.get("/")
@@ -51,6 +72,48 @@ async def root():
         "message": "API de Comunicados Institucionales",
         "version": "1.0.0",
         "docs": "/docs"
+    }
+
+
+# Exception handlers para SQLAlchemy
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError):
+    """
+    Manejador para errores de integridad (duplicados, FK inválidas, etc.).
+    Retorna 409 Conflict con mensaje limpio.
+    """
+    return JSONResponse(
+        status_code=409,
+        content={
+            "detail": "Conflicto: el recurso ya existe o viola una restricción de integridad"
+        }
+    )
+
+
+@app.exception_handler(SQLAlchemyError)
+async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
+    """
+    Manejador genérico para errores de SQLAlchemy.
+    Retorna 500 Internal Server Error con mensaje genérico.
+    Nunca expone la estructura de la BD.
+    """
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Error interno del servidor"
+        }
+    )
+
+
+@app.get("/health")
+async def health_check():
+    """
+    Endpoint de verificación de salud.
+    No requiere autenticación.
+    """
+    return {
+        "status": "healthy",
+        "version": "1.0.0"
     }
 
 

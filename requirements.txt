@@ -9,6 +9,12 @@ psycopg2-binary>=2.9.0
 # Configuración
 pydantic-settings>=2.0.0
 
+# Seguridad
+python-jose>=3.3.0
+passlib>=1.7.0
+bcrypt>=4.0.0
+slowapi>=0.1.0
+
 # Parsers de archivos
 pypdf>=3.0.0
 Pillow>=10.0.0
