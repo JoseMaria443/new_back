@@ -5,9 +5,9 @@ from uuid import UUID
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...domain.entities import MedioRecepcion
-from ...domain.ports import MedioRecepcionRepository
-from ...infrastructure.persistence import MedioRecepcionRepositoryAdapter
+from ....domain.entities import MedioRecepcion
+from ....domain.ports import MedioRecepcionRepository
+from ....infrastructure.persistence import MedioRecepcionRepositoryAdapter
 
 router = APIRouter(prefix="/medios-recepcion", tags=["medios-recepcion"])
 

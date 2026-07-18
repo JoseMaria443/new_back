@@ -5,9 +5,9 @@ from uuid import UUID
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...domain.entities import TipoComunicado
-from ...domain.ports import TipoComunicadoRepository
-from ...infrastructure.persistence import TipoComunicadoRepositoryAdapter
+from ....domain.entities import TipoComunicado
+from ....domain.ports import TipoComunicadoRepository
+from ....infrastructure.persistence import TipoComunicadoRepositoryAdapter
 
 router = APIRouter(prefix="/tipos-comunicado", tags=["tipos-comunicado"])
 

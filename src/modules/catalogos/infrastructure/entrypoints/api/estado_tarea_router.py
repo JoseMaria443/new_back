@@ -5,9 +5,9 @@ from uuid import UUID
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...domain.entities import EstadoTarea
-from ...domain.ports import EstadoTareaRepository
-from ...infrastructure.persistence import EstadoTareaRepositoryAdapter
+from ....domain.entities import EstadoTarea
+from ....domain.ports import EstadoTareaRepository
+from ....infrastructure.persistence import EstadoTareaRepositoryAdapter
 
 router = APIRouter(prefix="/estados-tarea", tags=["estados-tarea"])
 

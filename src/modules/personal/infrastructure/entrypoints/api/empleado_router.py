@@ -7,10 +7,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
-from ...domain.entities import Empleado
-from ...domain.ports import EmpleadoRepository
-from ...infrastructure.persistence import EmpleadoRepositoryAdapter
-from ...application.use_cases import (
+from ....domain.entities import Empleado
+from ....domain.ports import EmpleadoRepository
+from ....infrastructure.persistence import EmpleadoRepositoryAdapter
+from ....application.use_cases import (
     LoginEmpleadoUseCase,
     CreateEmpleadoUseCase,
     UpdateEmpleadoEstatusUseCase,

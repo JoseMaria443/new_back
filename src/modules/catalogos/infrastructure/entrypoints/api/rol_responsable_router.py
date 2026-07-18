@@ -5,9 +5,9 @@ from uuid import UUID
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...domain.entities import RolResponsable
-from ...domain.ports import RolResponsableRepository
-from ...infrastructure.persistence import RolResponsableRepositoryAdapter
+from ....domain.entities import RolResponsable
+from ....domain.ports import RolResponsableRepository
+from ....infrastructure.persistence import RolResponsableRepositoryAdapter
 
 router = APIRouter(prefix="/roles-responsable", tags=["roles-responsable"])
 

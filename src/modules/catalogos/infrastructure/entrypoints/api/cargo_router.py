@@ -5,9 +5,9 @@ from uuid import UUID
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...domain.entities import Cargo
-from ...domain.ports import CargoRepository
-from ...infrastructure.persistence import CargoRepositoryAdapter
+from ....domain.entities import Cargo
+from ....domain.ports import CargoRepository
+from ....infrastructure.persistence import CargoRepositoryAdapter
 
 router = APIRouter(prefix="/cargos", tags=["cargos"])
 
