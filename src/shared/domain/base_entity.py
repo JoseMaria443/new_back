@@ -15,7 +15,7 @@ class BaseEntity(ABC):
     Clase base abstracta para todas las entidades del dominio.
     Proporciona un identificador único y funcionalidad básica de igualdad.
     """
-    id: UUID = field(default_factory=uuid4)
+    id: UUID = field(default_factory=uuid4, kw_only=True)
     
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, self.__class__):
