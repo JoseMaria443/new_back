@@ -20,8 +20,9 @@ class LoginEmpleadoUseCase:
     Retorna un token JWT con idEmpleado, email y roles/cargos.
     """
     
-    def __init__(self, repository: EmpleadoRepository):
+    def __init__(self, repository: EmpleadoRepository, cargo_repository: Optional[Any] = None):
         self._repository = repository
+        self._cargo_repository = cargo_repository
     
     def execute(self, email: str, password: str) -> Dict[str, Any]:
         """
@@ -41,6 +42,14 @@ class LoginEmpleadoUseCase:
         # Obtener cargos del empleado
         cargos = self._repository.get_cargos(empleado.id)
         
+        # Obtener nombres de cargos
+        cargos_nombres = []
+        if self._cargo_repository is not None:
+            for cargo_id in cargos:
+                cargo = self._cargo_repository.get_by_id(cargo_id)
+                if cargo is not None:
+                    cargos_nombres.append(cargo.nombre)
+        
         # Crear token JWT
         token_data = {
             "idEmpleado": str(empleado.id),
@@ -48,6 +57,7 @@ class LoginEmpleadoUseCase:
             "nombre": empleado.nombre,
             "activo": empleado.activo,
             "cargos": [str(c) for c in cargos],
+            "cargos_nombres": cargos_nombres,
         }
         
         access_token = create_access_token(data=token_data)

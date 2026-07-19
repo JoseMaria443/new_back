@@ -4,7 +4,7 @@ Definen los contratos que deben implementar los adaptadores de persistencia.
 """
 from abc import ABC, abstractmethod
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from ..entities import Empleado, HistorialEstatus
 
@@ -17,6 +17,14 @@ class EmpleadoRepository(ABC):
     @abstractmethod
     def add(self, empleado: Empleado) -> Empleado:
         """Agrega un empleado."""
+        pass
+    
+    @abstractmethod
+    def add_with_cargos(self, empleado: Empleado, cargo_ids: List[UUID]) -> Empleado:
+        """
+        Agrega un empleado y le asigna los cargos indicados (tabla puente
+        EMPLEADO_CARGO), todo en una sola transacción ACID.
+        """
         pass
     
     @abstractmethod

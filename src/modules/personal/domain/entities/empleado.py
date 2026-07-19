@@ -38,5 +38,7 @@ class Empleado(BaseEntity):
         if len(self.email) > 150:
             raise ValueError("El email no puede exceder 150 caracteres")
         
-        if not self.password_hash:
-            raise ValueError("El hash de contraseña es requerido")
+        # Nota: password_hash es intencionalmente Optional. El repositorio
+        # lo omite (None) en get_by_id/get_all para no exponer el hash en
+        # lecturas; solo se exige que exista al momento de crear el
+        # empleado (validado en CreateEmpleadoUseCase antes de hashear).

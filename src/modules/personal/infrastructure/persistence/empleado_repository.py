@@ -87,6 +87,61 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
                 password_hash=empleado.password_hash,
             )
     
+    def add_with_cargos(self, empleado: Empleado, cargo_ids: List[UUID]) -> Empleado:
+        """
+        Agrega un empleado y le asigna los cargos indicados (EMPLEADO_CARGO)
+        en una sola transacción ACID (commit único al final, rollback si
+        cualquier paso falla).
+        """
+        with self._get_session() as session:
+            stmt = insert(self.table).values(
+                idEmpleado=empleado.id,
+                nombre=empleado.nombre,
+                email=empleado.email,
+                idArea=empleado.idArea,
+                activo=empleado.activo,
+                password_hash=empleado.password_hash
+            ).returning(
+                self.table.c.idEmpleado,
+                self.table.c.nombre,
+                self.table.c.email,
+                self.table.c.idArea,
+                self.table.c.activo,
+                self.table.c.fechaRegistro,
+            )
+            
+            result = session.execute(stmt)
+            row = result.fetchone()
+            
+            if cargo_ids:
+                metadata = DatabaseConnection.get_metadata()
+                if "EMPLEADO_CARGO" in metadata.tables:
+                    cargo_table = metadata.tables["EMPLEADO_CARGO"]
+                else:
+                    cargo_table = Table(
+                        "EMPLEADO_CARGO",
+                        metadata,
+                        Column("idEmpleado", PG_UUID(as_uuid=True), primary_key=True),
+                        Column("idCargo", PG_UUID(as_uuid=True), primary_key=True),
+                    )
+                for cargo_id in cargo_ids:
+                    session.execute(
+                        insert(cargo_table).values(
+                            idEmpleado=row.idEmpleado,
+                            idCargo=cargo_id,
+                        )
+                    )
+            
+            return Empleado(
+                id=row.idEmpleado,
+                nombre=row.nombre,
+                email=row.email,
+                idArea=row.idArea,
+                activo=row.activo,
+                fechaRegistro=row.fechaRegistro,
+                password_hash=empleado.password_hash,
+            )
+    
     def get_by_id(self, id: UUID) -> Optional[Empleado]:
         """Obtiene un empleado por su ID."""
         with self._get_session() as session:

@@ -15,9 +15,15 @@ from ....application.use_cases import (
     CreateEmpleadoUseCase,
     UpdateEmpleadoEstatusUseCase,
 )
+from modules.catalogos.domain.ports import AreaRepository, CargoRepository
+from modules.catalogos.infrastructure.persistence import (
+    AreaRepositoryAdapter,
+    CargoRepositoryAdapter,
+)
 from shared.infrastructure.security.security import (
     get_current_user,
     get_current_active_user,
+    require_roles,
 )
 from shared.infrastructure.security.rate_limiter import rate_limiter
 from shared.domain.exceptions import BusinessRuleViolationError
@@ -63,19 +69,30 @@ def get_empleado_repository() -> EmpleadoRepository:
     return EmpleadoRepositoryAdapter()
 
 
+def get_area_repository() -> AreaRepository:
+    """Factory para obtener el repositorio de áreas (catálogos)."""
+    return AreaRepositoryAdapter()
+
+
+def get_cargo_repository() -> CargoRepository:
+    """Factory para obtener el repositorio de cargos (catálogos)."""
+    return CargoRepositoryAdapter()
+
+
 @router.post("/login", response_model=LoginResponse)
 @rate_limiter.limit("5/minute")
 async def login(
     request: Request,
     login_data: LoginRequest,
     repository: EmpleadoRepository = Depends(get_empleado_repository),
+    cargo_repository: CargoRepository = Depends(get_cargo_repository),
 ) -> LoginResponse:
     """
     Login de empleado.
     Limitado a 5 peticiones/minuto por IP.
     No requiere autenticación previa.
     """
-    use_case = LoginEmpleadoUseCase(repository)
+    use_case = LoginEmpleadoUseCase(repository, cargo_repository)
     
     try:
         result = use_case.execute(
@@ -93,18 +110,17 @@ async def login(
 @router.post("/", response_model=EmpleadoResponse, status_code=201)
 async def create_empleado(
     request: CreateEmpleadoRequest,
-    current_user: dict = Depends(get_current_active_user),
+    current_user: dict = Depends(require_roles(["Administrador", "Director"])),
     repository: EmpleadoRepository = Depends(get_empleado_repository),
+    area_repository: AreaRepository = Depends(get_area_repository),
+    cargo_repository: CargoRepository = Depends(get_cargo_repository),
 ) -> EmpleadoResponse:
     """
     Crea un nuevo empleado.
     Solo roles "Administrador"/"Director" pueden usarlo.
     Requiere JWT válido.
     """
-    # TODO: Validar que el usuario tenga rol "Administrador" o "Director"
-    # Esto se haría verificando los cargos/roles del current_user
-    
-    use_case = CreateEmpleadoUseCase(repository)
+    use_case = CreateEmpleadoUseCase(repository, area_repository, cargo_repository)
     
     try:
         empleado = use_case.execute(
@@ -112,7 +128,6 @@ async def create_empleado(
             email=request.email,
             password=request.password,
             idArea=request.idArea,
-            roles=[],
             cargos=request.cargos,
         )
         
@@ -134,7 +149,7 @@ async def create_empleado(
 async def update_empleado_estatus(
     empleado_id: UUID,
     activo: bool,
-    current_user: dict = Depends(get_current_active_user),
+    current_user: dict = Depends(require_roles(["Director"])),
     repository: EmpleadoRepository = Depends(get_empleado_repository),
 ) -> EmpleadoResponse:
     """
@@ -143,8 +158,6 @@ async def update_empleado_estatus(
     Crea automáticamente un registro en HISTORIAL_ESTATUS.
     El idEmpleadoModifica viene del JWT, no del request.
     """
-    # TODO: Validar que el usuario tenga rol "Director"
-    
     use_case = UpdateEmpleadoEstatusUseCase(repository)
     
     try:
