@@ -26,9 +26,12 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
     @property
     def table(self) -> Table:
         """Define la tabla ROL_RESPONSABLE según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "ROL_RESPONSABLE" in metadata.tables:
+            return metadata.tables["ROL_RESPONSABLE"]
         return Table(
             "ROL_RESPONSABLE",
-            self._engine.metadata,
+            metadata,
             Column("idRolResponsable", PG_UUID(as_uuid=True), primary_key=True),
             Column("descripcionRol", String(100), unique=True, nullable=False),
         )

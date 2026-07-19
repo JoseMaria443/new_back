@@ -26,9 +26,12 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
     @property
     def table(self) -> Table:
         """Define la tabla MEDIO_RECEPCION según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "MEDIO_RECEPCION" in metadata.tables:
+            return metadata.tables["MEDIO_RECEPCION"]
         return Table(
             "MEDIO_RECEPCION",
-            self._engine.metadata,
+            metadata,
             Column("idMedioRecepcion", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(100), unique=True, nullable=False),
         )

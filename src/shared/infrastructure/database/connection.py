@@ -3,7 +3,7 @@ Gestión de conexión a base de datos usando SQLAlchemy Core.
 No se usa ORM, solo el motor de conexión y SQL crudo.
 Provee sesiones para transacciones ACID.
 """
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
@@ -21,6 +21,7 @@ class DatabaseConnection:
     
     _engine: Engine = None
     _session_factory = None
+    _metadata: MetaData = None
     
     @classmethod
     def get_engine(cls) -> Engine:
@@ -44,6 +45,17 @@ class DatabaseConnection:
                 expire_on_commit=False
             )
         return cls._session_factory
+    
+    @classmethod
+    def get_metadata(cls) -> MetaData:
+        """
+        Obtiene el objeto MetaData compartido para definir tablas con
+        SQLAlchemy Core. Un Engine no tiene atributo `.metadata`; el
+        MetaData se crea y comparte aparte, una sola vez por proceso.
+        """
+        if cls._metadata is None:
+            cls._metadata = MetaData()
+        return cls._metadata
     
     @classmethod
     @contextmanager

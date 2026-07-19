@@ -26,9 +26,12 @@ class TipoComunicadoRepositoryAdapter(TipoComunicadoRepository):
     @property
     def table(self) -> Table:
         """Define la tabla TIPO_COMUNICADO según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "TIPO_COMUNICADO" in metadata.tables:
+            return metadata.tables["TIPO_COMUNICADO"]
         return Table(
             "TIPO_COMUNICADO",
-            self._engine.metadata,
+            metadata,
             Column("idTipoComunicado", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(100), unique=True, nullable=False),
         )

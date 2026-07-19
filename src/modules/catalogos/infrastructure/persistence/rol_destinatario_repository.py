@@ -26,9 +26,12 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
     @property
     def table(self) -> Table:
         """Define la tabla ROL_DESTINATARIO según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "ROL_DESTINATARIO" in metadata.tables:
+            return metadata.tables["ROL_DESTINATARIO"]
         return Table(
             "ROL_DESTINATARIO",
-            self._engine.metadata,
+            metadata,
             Column("idRolDestinatario", PG_UUID(as_uuid=True), primary_key=True),
             Column("descripcionRol", String(100), unique=True, nullable=False),
         )

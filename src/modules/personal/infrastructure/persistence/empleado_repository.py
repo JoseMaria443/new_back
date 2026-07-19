@@ -5,6 +5,7 @@ Usa SQLAlchemy Core con SQL crudo.
 from uuid import UUID
 from typing import List, Optional
 from datetime import datetime
+from contextlib import contextmanager
 
 from sqlalchemy import Table, Column, String, Boolean, insert, select, update
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -24,12 +25,27 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
     def __init__(self, session: Optional[Session] = None):
         self._session = session
     
+    @contextmanager
+    def _get_session(self):
+        """
+        Provee una sesión: reutiliza la inyectada (self._session) si existe,
+        o abre y cierra una nueva con manejo ACID (commit/rollback) si no.
+        """
+        if self._session is not None:
+            yield self._session
+        else:
+            with DatabaseConnection.get_session() as session:
+                yield session
+    
     @property
     def table(self) -> Table:
         """Define la tabla EMPLEADO según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "EMPLEADO" in metadata.tables:
+            return metadata.tables["EMPLEADO"]
         return Table(
             "EMPLEADO",
-            DatabaseConnection.get_engine().metadata,
+            metadata,
             Column("idEmpleado", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(100), nullable=False),
             Column("email", String(150), unique=True, nullable=False),
@@ -41,157 +57,152 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
     
     def add(self, empleado: Empleado) -> Empleado:
         """Agrega un empleado y retorna la entidad persistida."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = insert(self.table).values(
-            idEmpleado=empleado.id,
-            nombre=empleado.nombre,
-            email=empleado.email,
-            idArea=empleado.idArea,
-            activo=empleado.activo,
-            password_hash=empleado.password_hash
-        ).returning(
-            self.table.c.idEmpleado,
-            self.table.c.nombre,
-            self.table.c.email,
-            self.table.c.idArea,
-            self.table.c.activo,
-            self.table.c.fechaRegistro,
-        )
-        
-        result = session.execute(stmt)
-        row = result.fetchone()
-        
-        return Empleado(
-            id=row.idEmpleado,
-            nombre=row.nombre,
-            email=row.email,
-            idArea=row.idArea,
-            activo=row.activo,
-            fechaRegistro=row.fechaRegistro,
-            password_hash=empleado.password_hash,
-        )
-    
-    def get_by_id(self, id: UUID) -> Optional[Empleado]:
-        """Obtiene un empleado por su ID."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = select(
-            self.table.c.idEmpleado,
-            self.table.c.nombre,
-            self.table.c.email,
-            self.table.c.idArea,
-            self.table.c.activo,
-            self.table.c.fechaRegistro,
-        ).where(self.table.c.idEmpleado == id)
-        
-        result = session.execute(stmt)
-        row = result.fetchone()
-        
-        if row is None:
-            return None
-        
-        return Empleado(
-            id=row.idEmpleado,
-            nombre=row.nombre,
-            email=row.email,
-            idArea=row.idArea,
-            activo=row.activo,
-            fechaRegistro=row.fechaRegistro,
-            password_hash=None,  # No se expone el hash
-        )
-    
-    def get_by_email(self, email: str) -> Optional[Empleado]:
-        """Obtiene un empleado por su email."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = select(
-            self.table.c.idEmpleado,
-            self.table.c.nombre,
-            self.table.c.email,
-            self.table.c.idArea,
-            self.table.c.activo,
-            self.table.c.fechaRegistro,
-            self.table.c.password_hash,
-        ).where(self.table.c.email == email)
-        
-        result = session.execute(stmt)
-        row = result.fetchone()
-        
-        if row is None:
-            return None
-        
-        return Empleado(
-            id=row.idEmpleado,
-            nombre=row.nombre,
-            email=row.email,
-            idArea=row.idArea,
-            activo=row.activo,
-            fechaRegistro=row.fechaRegistro,
-            password_hash=row.password_hash,
-        )
-    
-    def get_all(self) -> List[Empleado]:
-        """Obtiene todos los empleados."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = select(
-            self.table.c.idEmpleado,
-            self.table.c.nombre,
-            self.table.c.email,
-            self.table.c.idArea,
-            self.table.c.activo,
-            self.table.c.fechaRegistro,
-        )
-        
-        result = session.execute(stmt)
-        rows = result.fetchall()
-        
-        return [
-            Empleado(
+        with self._get_session() as session:
+            stmt = insert(self.table).values(
+                idEmpleado=empleado.id,
+                nombre=empleado.nombre,
+                email=empleado.email,
+                idArea=empleado.idArea,
+                activo=empleado.activo,
+                password_hash=empleado.password_hash
+            ).returning(
+                self.table.c.idEmpleado,
+                self.table.c.nombre,
+                self.table.c.email,
+                self.table.c.idArea,
+                self.table.c.activo,
+                self.table.c.fechaRegistro,
+            )
+            
+            result = session.execute(stmt)
+            row = result.fetchone()
+            
+            return Empleado(
                 id=row.idEmpleado,
                 nombre=row.nombre,
                 email=row.email,
                 idArea=row.idArea,
                 activo=row.activo,
                 fechaRegistro=row.fechaRegistro,
-                password_hash=None,
+                password_hash=empleado.password_hash,
             )
-            for row in rows
-        ]
+    
+    def get_by_id(self, id: UUID) -> Optional[Empleado]:
+        """Obtiene un empleado por su ID."""
+        with self._get_session() as session:
+            stmt = select(
+                self.table.c.idEmpleado,
+                self.table.c.nombre,
+                self.table.c.email,
+                self.table.c.idArea,
+                self.table.c.activo,
+                self.table.c.fechaRegistro,
+            ).where(self.table.c.idEmpleado == id)
+            
+            result = session.execute(stmt)
+            row = result.fetchone()
+            
+            if row is None:
+                return None
+            
+            return Empleado(
+                id=row.idEmpleado,
+                nombre=row.nombre,
+                email=row.email,
+                idArea=row.idArea,
+                activo=row.activo,
+                fechaRegistro=row.fechaRegistro,
+                password_hash=None,  # No se expone el hash
+            )
+    
+    def get_by_email(self, email: str) -> Optional[Empleado]:
+        """Obtiene un empleado por su email."""
+        with self._get_session() as session:
+            stmt = select(
+                self.table.c.idEmpleado,
+                self.table.c.nombre,
+                self.table.c.email,
+                self.table.c.idArea,
+                self.table.c.activo,
+                self.table.c.fechaRegistro,
+                self.table.c.password_hash,
+            ).where(self.table.c.email == email)
+            
+            result = session.execute(stmt)
+            row = result.fetchone()
+            
+            if row is None:
+                return None
+            
+            return Empleado(
+                id=row.idEmpleado,
+                nombre=row.nombre,
+                email=row.email,
+                idArea=row.idArea,
+                activo=row.activo,
+                fechaRegistro=row.fechaRegistro,
+                password_hash=row.password_hash,
+            )
+    
+    def get_all(self) -> List[Empleado]:
+        """Obtiene todos los empleados."""
+        with self._get_session() as session:
+            stmt = select(
+                self.table.c.idEmpleado,
+                self.table.c.nombre,
+                self.table.c.email,
+                self.table.c.idArea,
+                self.table.c.activo,
+                self.table.c.fechaRegistro,
+            )
+            
+            result = session.execute(stmt)
+            rows = result.fetchall()
+            
+            return [
+                Empleado(
+                    id=row.idEmpleado,
+                    nombre=row.nombre,
+                    email=row.email,
+                    idArea=row.idArea,
+                    activo=row.activo,
+                    fechaRegistro=row.fechaRegistro,
+                    password_hash=None,
+                )
+                for row in rows
+            ]
     
     def update(self, empleado: Empleado) -> Empleado:
         """Actualiza un empleado existente."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = update(self.table).where(
-            self.table.c.idEmpleado == empleado.id
-        ).values(
-            nombre=empleado.nombre,
-            email=empleado.email,
-            idArea=empleado.idArea,
-            activo=empleado.activo,
-        ).returning(
-            self.table.c.idEmpleado,
-            self.table.c.nombre,
-            self.table.c.email,
-            self.table.c.idArea,
-            self.table.c.activo,
-            self.table.c.fechaRegistro,
-        )
-        
-        result = session.execute(stmt)
-        row = result.fetchone()
-        
-        return Empleado(
-            id=row.idEmpleado,
-            nombre=row.nombre,
-            email=row.email,
-            idArea=row.idArea,
-            activo=row.activo,
-            fechaRegistro=row.fechaRegistro,
-            password_hash=empleado.password_hash,
-        )
+        with self._get_session() as session:
+            stmt = update(self.table).where(
+                self.table.c.idEmpleado == empleado.id
+            ).values(
+                nombre=empleado.nombre,
+                email=empleado.email,
+                idArea=empleado.idArea,
+                activo=empleado.activo,
+            ).returning(
+                self.table.c.idEmpleado,
+                self.table.c.nombre,
+                self.table.c.email,
+                self.table.c.idArea,
+                self.table.c.activo,
+                self.table.c.fechaRegistro,
+            )
+            
+            result = session.execute(stmt)
+            row = result.fetchone()
+            
+            return Empleado(
+                id=row.idEmpleado,
+                nombre=row.nombre,
+                email=row.email,
+                idArea=row.idArea,
+                activo=row.activo,
+                fechaRegistro=row.fechaRegistro,
+                password_hash=empleado.password_hash,
+            )
     
     def update_estatus(
         self, 
@@ -246,23 +257,26 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
         """
         Obtiene los IDs de cargos asignados a un empleado.
         """
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        empleado_cargo_table = Table(
-            "EMPLEADO_CARGO",
-            DatabaseConnection.get_engine().metadata,
-            Column("idEmpleado", PG_UUID(as_uuid=True), primary_key=True),
-            Column("idCargo", PG_UUID(as_uuid=True), primary_key=True),
-        )
-        
-        stmt = select(empleado_cargo_table.c.idCargo).where(
-            empleado_cargo_table.c.idEmpleado == idEmpleado
-        )
-        
-        result = session.execute(stmt)
-        rows = result.fetchall()
-        
-        return [row.idCargo for row in rows]
+        with self._get_session() as session:
+            metadata = DatabaseConnection.get_metadata()
+            if "EMPLEADO_CARGO" in metadata.tables:
+                empleado_cargo_table = metadata.tables["EMPLEADO_CARGO"]
+            else:
+                empleado_cargo_table = Table(
+                    "EMPLEADO_CARGO",
+                    metadata,
+                    Column("idEmpleado", PG_UUID(as_uuid=True), primary_key=True),
+                    Column("idCargo", PG_UUID(as_uuid=True), primary_key=True),
+                )
+            
+            stmt = select(empleado_cargo_table.c.idCargo).where(
+                empleado_cargo_table.c.idEmpleado == idEmpleado
+            )
+            
+            result = session.execute(stmt)
+            rows = result.fetchall()
+            
+            return [row.idCargo for row in rows]
 
 
 class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
@@ -274,12 +288,27 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
     def __init__(self, session: Optional[Session] = None):
         self._session = session
     
+    @contextmanager
+    def _get_session(self):
+        """
+        Provee una sesión: reutiliza la inyectada (self._session) si existe,
+        o abre y cierra una nueva con manejo ACID (commit/rollback) si no.
+        """
+        if self._session is not None:
+            yield self._session
+        else:
+            with DatabaseConnection.get_session() as session:
+                yield session
+    
     @property
     def table(self) -> Table:
         """Define la tabla HISTORIAL_ESTATUS según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "HISTORIAL_ESTATUS" in metadata.tables:
+            return metadata.tables["HISTORIAL_ESTATUS"]
         return Table(
             "HISTORIAL_ESTATUS",
-            DatabaseConnection.get_engine().metadata,
+            metadata,
             Column("idHistorial", PG_UUID(as_uuid=True), primary_key=True),
             Column("idEmpleadoAfectado", PG_UUID(as_uuid=True), nullable=False),
             Column("idEmpleadoModifica", PG_UUID(as_uuid=True), nullable=False),
@@ -289,106 +318,102 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
     
     def add(self, historial: HistorialEstatus) -> HistorialEstatus:
         """Agrega un registro de historial y retorna la entidad persistida."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = insert(self.table).values(
-            idHistorial=historial.id,
-            idEmpleadoAfectado=historial.idEmpleadoAfectado,
-            idEmpleadoModifica=historial.idEmpleadoModifica,
-            accion=historial.accion.value,
-        ).returning(
-            self.table.c.idHistorial,
-            self.table.c.idEmpleadoAfectado,
-            self.table.c.idEmpleadoModifica,
-            self.table.c.accion,
-            self.table.c.fechaRegistro,
-        )
-        
-        result = session.execute(stmt)
-        row = result.fetchone()
-        
-        return HistorialEstatus(
-            id=row.idHistorial,
-            idEmpleadoAfectado=row.idEmpleadoAfectado,
-            idEmpleadoModifica=row.idEmpleadoModifica,
-            accion=AccionHistorial(row.accion),
-            fechaRegistro=row.fechaRegistro,
-        )
+        with self._get_session() as session:
+            stmt = insert(self.table).values(
+                idHistorial=historial.id,
+                idEmpleadoAfectado=historial.idEmpleadoAfectado,
+                idEmpleadoModifica=historial.idEmpleadoModifica,
+                accion=historial.accion.value,
+            ).returning(
+                self.table.c.idHistorial,
+                self.table.c.idEmpleadoAfectado,
+                self.table.c.idEmpleadoModifica,
+                self.table.c.accion,
+                self.table.c.fechaRegistro,
+            )
+            
+            result = session.execute(stmt)
+            row = result.fetchone()
+            
+            return HistorialEstatus(
+                id=row.idHistorial,
+                idEmpleadoAfectado=row.idEmpleadoAfectado,
+                idEmpleadoModifica=row.idEmpleadoModifica,
+                accion=AccionHistorial(row.accion),
+                fechaRegistro=row.fechaRegistro,
+            )
     
     def get_by_id(self, id: UUID) -> Optional[HistorialEstatus]:
         """Obtiene un registro de historial por su ID."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = select(
-            self.table.c.idHistorial,
-            self.table.c.idEmpleadoAfectado,
-            self.table.c.idEmpleadoModifica,
-            self.table.c.accion,
-            self.table.c.fechaRegistro,
-        ).where(self.table.c.idHistorial == id)
-        
-        result = session.execute(stmt)
-        row = result.fetchone()
-        
-        if row is None:
-            return None
-        
-        return HistorialEstatus(
-            id=row.idHistorial,
-            idEmpleadoAfectado=row.idEmpleadoAfectado,
-            idEmpleadoModifica=row.idEmpleadoModifica,
-            accion=AccionHistorial(row.accion),
-            fechaRegistro=row.fechaRegistro,
-        )
+        with self._get_session() as session:
+            stmt = select(
+                self.table.c.idHistorial,
+                self.table.c.idEmpleadoAfectado,
+                self.table.c.idEmpleadoModifica,
+                self.table.c.accion,
+                self.table.c.fechaRegistro,
+            ).where(self.table.c.idHistorial == id)
+            
+            result = session.execute(stmt)
+            row = result.fetchone()
+            
+            if row is None:
+                return None
+            
+            return HistorialEstatus(
+                id=row.idHistorial,
+                idEmpleadoAfectado=row.idEmpleadoAfectado,
+                idEmpleadoModifica=row.idEmpleadoModifica,
+                accion=AccionHistorial(row.accion),
+                fechaRegistro=row.fechaRegistro,
+            )
     
     def get_all(self) -> List[HistorialEstatus]:
         """Obtiene todos los registros de historial."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = select(
-            self.table.c.idHistorial,
-            self.table.c.idEmpleadoAfectado,
-            self.table.c.idEmpleadoModifica,
-            self.table.c.accion,
-            self.table.c.fechaRegistro,
-        )
-        
-        result = session.execute(stmt)
-        rows = result.fetchall()
-        
-        return [
-            HistorialEstatus(
-                id=row.idHistorial,
-                idEmpleadoAfectado=row.idEmpleadoAfectado,
-                idEmpleadoModifica=row.idEmpleadoModifica,
-                accion=AccionHistorial(row.accion),
-                fechaRegistro=row.fechaRegistro,
+        with self._get_session() as session:
+            stmt = select(
+                self.table.c.idHistorial,
+                self.table.c.idEmpleadoAfectado,
+                self.table.c.idEmpleadoModifica,
+                self.table.c.accion,
+                self.table.c.fechaRegistro,
             )
-            for row in rows
-        ]
+            
+            result = session.execute(stmt)
+            rows = result.fetchall()
+            
+            return [
+                HistorialEstatus(
+                    id=row.idHistorial,
+                    idEmpleadoAfectado=row.idEmpleadoAfectado,
+                    idEmpleadoModifica=row.idEmpleadoModifica,
+                    accion=AccionHistorial(row.accion),
+                    fechaRegistro=row.fechaRegistro,
+                )
+                for row in rows
+            ]
     
     def get_by_empleado(self, idEmpleado: UUID) -> List[HistorialEstatus]:
         """Obtiene el historial de estatus de un empleado."""
-        session = self._session or next(DatabaseConnection.get_session())
-        
-        stmt = select(
-            self.table.c.idHistorial,
-            self.table.c.idEmpleadoAfectado,
-            self.table.c.idEmpleadoModifica,
-            self.table.c.accion,
-            self.table.c.fechaRegistro,
-        ).where(self.table.c.idEmpleadoAfectado == idEmpleado)
-        
-        result = session.execute(stmt)
-        rows = result.fetchall()
-        
-        return [
-            HistorialEstatus(
-                id=row.idHistorial,
-                idEmpleadoAfectado=row.idEmpleadoAfectado,
-                idEmpleadoModifica=row.idEmpleadoModifica,
-                accion=AccionHistorial(row.accion),
-                fechaRegistro=row.fechaRegistro,
-            )
-            for row in rows
-        ]
+        with self._get_session() as session:
+            stmt = select(
+                self.table.c.idHistorial,
+                self.table.c.idEmpleadoAfectado,
+                self.table.c.idEmpleadoModifica,
+                self.table.c.accion,
+                self.table.c.fechaRegistro,
+            ).where(self.table.c.idEmpleadoAfectado == idEmpleado)
+            
+            result = session.execute(stmt)
+            rows = result.fetchall()
+            
+            return [
+                HistorialEstatus(
+                    id=row.idHistorial,
+                    idEmpleadoAfectado=row.idEmpleadoAfectado,
+                    idEmpleadoModifica=row.idEmpleadoModifica,
+                    accion=AccionHistorial(row.accion),
+                    fechaRegistro=row.fechaRegistro,
+                )
+                for row in rows
+            ]

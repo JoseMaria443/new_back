@@ -26,9 +26,12 @@ class CargoRepositoryAdapter(CargoRepository):
     @property
     def table(self) -> Table:
         """Define la tabla CARGO según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "CARGO" in metadata.tables:
+            return metadata.tables["CARGO"]
         return Table(
             "CARGO",
-            self._engine.metadata,
+            metadata,
             Column("idCargo", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(100), unique=True, nullable=False),
         )

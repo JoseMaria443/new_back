@@ -26,9 +26,12 @@ class AreaRepositoryAdapter(AreaRepository):
     @property
     def table(self) -> Table:
         """Define la tabla AREA según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "AREA" in metadata.tables:
+            return metadata.tables["AREA"]
         return Table(
             "AREA",
-            self._engine.metadata,
+            metadata,
             Column("idArea", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(150), unique=True, nullable=False),
         )

@@ -13,6 +13,7 @@ from shared.infrastructure.security.rate_limiter import (
     rate_limit_exception_handler,
     limiter,
 )
+from shared.infrastructure.security.auth_middleware import JWTAuthMiddleware
 
 # Crear la aplicación FastAPI
 app = FastAPI(
@@ -24,6 +25,12 @@ app = FastAPI(
 # Configurar rate limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
+
+# Protección universal de rutas (Regla I.6): JWT obligatorio en todas las
+# rutas salvo /api/empleado/login y /health. Se registra ANTES de CORS en
+# el código para que CORS quede como capa más externa y las peticiones
+# OPTIONS de preflight no se vean bloqueadas.
+app.add_middleware(JWTAuthMiddleware)
 
 # Configurar CORS - dominio del frontend Next.js
 # En producción, se debe especificar el origen exacto

@@ -4,7 +4,7 @@ Endpoints: /api/empleado (login, create) y /api/empleado/{id}/estatus
 """
 from uuid import UUID
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, EmailStr
 
 from ....domain.entities import Empleado
@@ -66,7 +66,8 @@ def get_empleado_repository() -> EmpleadoRepository:
 @router.post("/login", response_model=LoginResponse)
 @rate_limiter.limit("5/minute")
 async def login(
-    request: LoginRequest,
+    request: Request,
+    login_data: LoginRequest,
     repository: EmpleadoRepository = Depends(get_empleado_repository),
 ) -> LoginResponse:
     """
@@ -78,8 +79,8 @@ async def login(
     
     try:
         result = use_case.execute(
-            email=request.email,
-            password=request.password,
+            email=login_data.email,
+            password=login_data.password,
         )
         return result
     except Exception as e:

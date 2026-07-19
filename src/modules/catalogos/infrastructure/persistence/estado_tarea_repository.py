@@ -26,9 +26,12 @@ class EstadoTareaRepositoryAdapter(EstadoTareaRepository):
     @property
     def table(self) -> Table:
         """Define la tabla ESTADO_TAREA según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "ESTADO_TAREA" in metadata.tables:
+            return metadata.tables["ESTADO_TAREA"]
         return Table(
             "ESTADO_TAREA",
-            self._engine.metadata,
+            metadata,
             Column("idEstadoTarea", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(50), unique=True, nullable=False),
         )
