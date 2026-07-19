@@ -16,6 +16,7 @@ class MedioRecepcion(BaseEntity):
     """
     # idMedioRecepcion -> id (heredado de BaseEntity)
     nombre: str  # VARCHAR(100) UNIQUE NOT NULL
+    archivado: bool = False
     
     def __post_init__(self) -> None:
         """Validaciones de invariantes."""

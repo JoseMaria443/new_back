@@ -16,6 +16,7 @@ class Area(BaseEntity):
     """
     # idArea -> id (heredado de BaseEntity)
     nombre: str  # VARCHAR(150) UNIQUE NOT NULL
+    archivado: bool = False
     
     def __post_init__(self) -> None:
         """Validaciones de invariantes."""

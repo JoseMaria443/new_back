@@ -24,17 +24,27 @@ async def create_rol_destinatario(
     try:
         rol = RolDestinatario(descripcionRol=descripcionRol)
         saved = repository.add(rol)
-        return {"id": str(saved.id), "descripcionRol": saved.descripcionRol}
+        return {"id": str(saved.id), "descripcionRol": saved.descripcionRol, "archivado": saved.archivado}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=List[dict])
-async def list_roles_destinatario(
+@router.get("/activos", response_model=List[dict])
+async def list_roles_destinatario_activos(
     repository: RolDestinatarioRepository = Depends(get_rol_destinatario_repository)
 ) -> List[dict]:
+    """Lista solo los roles de destinatario activos (no archivados). Para dropdowns/checkboxes."""
+    roles = repository.get_activos()
+    return [{"id": str(r.id), "descripcionRol": r.descripcionRol, "archivado": r.archivado} for r in roles]
+
+
+@router.get("/todos", response_model=List[dict])
+async def list_roles_destinatario_todos(
+    repository: RolDestinatarioRepository = Depends(get_rol_destinatario_repository)
+) -> List[dict]:
+    """Lista TODOS los roles de destinatario (activos y archivados). Solo para vista de Configuración."""
     roles = repository.get_all()
-    return [{"id": str(r.id), "descripcionRol": r.descripcionRol} for r in roles]
+    return [{"id": str(r.id), "descripcionRol": r.descripcionRol, "archivado": r.archivado} for r in roles]
 
 
 @router.get("/{rol_id}", response_model=dict)
@@ -45,33 +55,19 @@ async def get_rol_destinatario(
     rol = repository.get_by_id(rol_id)
     if rol is None:
         raise HTTPException(status_code=404, detail="Rol de destinatario no encontrado")
-    return {"id": str(rol.id), "descripcionRol": rol.descripcionRol}
+    return {"id": str(rol.id), "descripcionRol": rol.descripcionRol, "archivado": rol.archivado}
 
 
-@router.put("/{rol_id}", response_model=dict)
-async def update_rol_destinatario(
+@router.patch("/{rol_id}/archivar", response_model=dict)
+async def archivar_rol_destinatario(
     rol_id: UUID,
-    descripcionRol: str,
+    archivado: bool,
     repository: RolDestinatarioRepository = Depends(get_rol_destinatario_repository)
 ) -> dict:
+    """Archiva (True) o desarchiva (False) un rol de destinatario."""
     rol = repository.get_by_id(rol_id)
     if rol is None:
         raise HTTPException(status_code=404, detail="Rol de destinatario no encontrado")
     
-    try:
-        rol.descripcionRol = descripcionRol
-        updated = repository.update(rol)
-        return {"id": str(updated.id), "descripcionRol": updated.descripcionRol}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.delete("/{rol_id}", status_code=204)
-async def delete_rol_destinatario(
-    rol_id: UUID,
-    repository: RolDestinatarioRepository = Depends(get_rol_destinatario_repository)
-) -> None:
-    rol = repository.get_by_id(rol_id)
-    if rol is None:
-        raise HTTPException(status_code=404, detail="Rol de destinatario no encontrado")
-    repository.delete(rol_id)
+    updated = repository.set_archivado(rol_id, archivado)
+    return {"id": str(updated.id), "descripcionRol": updated.descripcionRol, "archivado": updated.archivado}
