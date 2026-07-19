@@ -16,6 +16,7 @@ class RolResponsable(BaseEntity):
     """
     # idRolResponsable -> id (heredado de BaseEntity)
     descripcionRol: str  # VARCHAR(100) UNIQUE NOT NULL
+    archivado: bool = False
     
     def __post_init__(self) -> None:
         """Validaciones de invariantes."""

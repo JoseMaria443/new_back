@@ -5,7 +5,7 @@ Usa SQLAlchemy Core con SQL crudo.
 from uuid import UUID
 from typing import List, Optional
 
-from sqlalchemy import Table, Column, String, insert, select, update, delete
+from sqlalchemy import Table, Column, String, Boolean, insert, select, update, delete
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.engine import Engine
 
@@ -34,6 +34,7 @@ class AreaRepositoryAdapter(AreaRepository):
             metadata,
             Column("idArea", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(150), unique=True, nullable=False),
+            Column("archivado", Boolean, nullable=False, server_default="false"),
         )
     
     def add(self, area: Area) -> Area:
@@ -41,10 +42,12 @@ class AreaRepositoryAdapter(AreaRepository):
         with self._engine.connect() as conn:
             stmt = insert(self.table).values(
                 idArea=area.id,
-                nombre=area.nombre
+                nombre=area.nombre,
+                archivado=area.archivado
             ).returning(
                 self.table.c.idArea,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             )
             result = conn.execute(stmt)
             row = result.fetchone()
@@ -52,7 +55,8 @@ class AreaRepositoryAdapter(AreaRepository):
             
             return Area(
                 id=row.idArea,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def get_by_id(self, id: UUID) -> Optional[Area]:
@@ -60,7 +64,8 @@ class AreaRepositoryAdapter(AreaRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idArea,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             ).where(self.table.c.idArea == id)
             
             result = conn.execute(stmt)
@@ -71,7 +76,8 @@ class AreaRepositoryAdapter(AreaRepository):
             
             return Area(
                 id=row.idArea,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def get_by_nombre(self, nombre: str) -> Optional[Area]:
@@ -79,7 +85,8 @@ class AreaRepositoryAdapter(AreaRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idArea,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             ).where(self.table.c.nombre == nombre)
             
             result = conn.execute(stmt)
@@ -90,7 +97,8 @@ class AreaRepositoryAdapter(AreaRepository):
             
             return Area(
                 id=row.idArea,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def get_all(self) -> List[Area]:
@@ -98,16 +106,57 @@ class AreaRepositoryAdapter(AreaRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idArea,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             )
             
             result = conn.execute(stmt)
             rows = result.fetchall()
             
             return [
-                Area(id=row.idArea, nombre=row.nombre)
+                Area(id=row.idArea, nombre=row.nombre, archivado=row.archivado)
                 for row in rows
             ]
+    
+    def get_activos(self) -> List[Area]:
+        """Obtiene solo las áreas activas (archivado == False)."""
+        with self._engine.connect() as conn:
+            stmt = select(
+                self.table.c.idArea,
+                self.table.c.nombre,
+                self.table.c.archivado
+            ).where(self.table.c.archivado == False)
+            
+            result = conn.execute(stmt)
+            rows = result.fetchall()
+            
+            return [
+                Area(id=row.idArea, nombre=row.nombre, archivado=row.archivado)
+                for row in rows
+            ]
+    
+    def set_archivado(self, id: UUID, archivado: bool) -> Area:
+        """Archiva o desarchiva un área."""
+        with self._engine.connect() as conn:
+            stmt = update(self.table).where(
+                self.table.c.idArea == id
+            ).values(
+                archivado=archivado
+            ).returning(
+                self.table.c.idArea,
+                self.table.c.nombre,
+                self.table.c.archivado
+            )
+            
+            result = conn.execute(stmt)
+            row = result.fetchone()
+            conn.commit()
+            
+            return Area(
+                id=row.idArea,
+                nombre=row.nombre,
+                archivado=row.archivado
+            )
     
     def update(self, area: Area) -> Area:
         """Actualiza un área existente."""
@@ -118,7 +167,8 @@ class AreaRepositoryAdapter(AreaRepository):
                 nombre=area.nombre
             ).returning(
                 self.table.c.idArea,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             )
             
             result = conn.execute(stmt)
@@ -127,7 +177,8 @@ class AreaRepositoryAdapter(AreaRepository):
             
             return Area(
                 id=row.idArea,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def delete(self, id: UUID) -> None:

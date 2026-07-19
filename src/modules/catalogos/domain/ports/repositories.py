@@ -43,13 +43,13 @@ class AreaRepository(ABC):
         pass
     
     @abstractmethod
-    def update(self, area: Area) -> Area:
-        """Actualiza un área."""
+    def get_activos(self) -> List[Area]:
+        """Obtiene solo los registros con archivado == False."""
         pass
     
     @abstractmethod
-    def delete(self, id: UUID) -> None:
-        """Elimina un área."""
+    def set_archivado(self, id: UUID, archivado: bool) -> Area:
+        """Archiva o desarchiva un registro (único método para ocultar/mostrar)."""
         pass
 
 
@@ -79,13 +79,13 @@ class CargoRepository(ABC):
         pass
     
     @abstractmethod
-    def update(self, cargo: Cargo) -> Cargo:
-        """Actualiza un cargo."""
+    def get_activos(self) -> List[Cargo]:
+        """Obtiene solo los registros con archivado == False."""
         pass
     
     @abstractmethod
-    def delete(self, id: UUID) -> None:
-        """Elimina un cargo."""
+    def set_archivado(self, id: UUID, archivado: bool) -> Cargo:
+        """Archiva o desarchiva un registro (único método para ocultar/mostrar)."""
         pass
 
 
@@ -115,13 +115,13 @@ class TipoComunicadoRepository(ABC):
         pass
     
     @abstractmethod
-    def update(self, tipo: TipoComunicado) -> TipoComunicado:
-        """Actualiza un tipo de comunicado."""
+    def get_activos(self) -> List[TipoComunicado]:
+        """Obtiene solo los registros con archivado == False."""
         pass
     
     @abstractmethod
-    def delete(self, id: UUID) -> None:
-        """Elimina un tipo de comunicado."""
+    def set_archivado(self, id: UUID, archivado: bool) -> TipoComunicado:
+        """Archiva o desarchiva un registro (único método para ocultar/mostrar)."""
         pass
 
 
@@ -151,13 +151,13 @@ class MedioRecepcionRepository(ABC):
         pass
     
     @abstractmethod
-    def update(self, medio: MedioRecepcion) -> MedioRecepcion:
-        """Actualiza un medio de recepción."""
+    def get_activos(self) -> List[MedioRecepcion]:
+        """Obtiene solo los registros con archivado == False."""
         pass
     
     @abstractmethod
-    def delete(self, id: UUID) -> None:
-        """Elimina un medio de recepción."""
+    def set_archivado(self, id: UUID, archivado: bool) -> MedioRecepcion:
+        """Archiva o desarchiva un registro (único método para ocultar/mostrar)."""
         pass
 
 
@@ -187,13 +187,13 @@ class RolDestinatarioRepository(ABC):
         pass
     
     @abstractmethod
-    def update(self, rol: RolDestinatario) -> RolDestinatario:
-        """Actualiza un rol de destinatario."""
+    def get_activos(self) -> List[RolDestinatario]:
+        """Obtiene solo los registros con archivado == False."""
         pass
     
     @abstractmethod
-    def delete(self, id: UUID) -> None:
-        """Elimina un rol de destinatario."""
+    def set_archivado(self, id: UUID, archivado: bool) -> RolDestinatario:
+        """Archiva o desarchiva un registro (único método para ocultar/mostrar)."""
         pass
 
 
@@ -223,13 +223,13 @@ class RolResponsableRepository(ABC):
         pass
     
     @abstractmethod
-    def update(self, rol: RolResponsable) -> RolResponsable:
-        """Actualiza un rol de responsable."""
+    def get_activos(self) -> List[RolResponsable]:
+        """Obtiene solo los registros con archivado == False."""
         pass
     
     @abstractmethod
-    def delete(self, id: UUID) -> None:
-        """Elimina un rol de responsable."""
+    def set_archivado(self, id: UUID, archivado: bool) -> RolResponsable:
+        """Archiva o desarchiva un registro (único método para ocultar/mostrar)."""
         pass
 
 

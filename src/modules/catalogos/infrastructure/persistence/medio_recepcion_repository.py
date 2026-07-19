@@ -5,7 +5,7 @@ Usa SQLAlchemy Core con SQL crudo.
 from uuid import UUID
 from typing import List, Optional
 
-from sqlalchemy import Table, Column, String, insert, select, update, delete
+from sqlalchemy import Table, Column, String, Boolean, insert, select, update, delete
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.engine import Engine
 
@@ -34,6 +34,7 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
             metadata,
             Column("idMedioRecepcion", PG_UUID(as_uuid=True), primary_key=True),
             Column("nombre", String(100), unique=True, nullable=False),
+            Column("archivado", Boolean, nullable=False, server_default="false"),
         )
     
     def add(self, medio: MedioRecepcion) -> MedioRecepcion:
@@ -41,10 +42,12 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
         with self._engine.connect() as conn:
             stmt = insert(self.table).values(
                 idMedioRecepcion=medio.id,
-                nombre=medio.nombre
+                nombre=medio.nombre,
+                archivado=medio.archivado
             ).returning(
                 self.table.c.idMedioRecepcion,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             )
             result = conn.execute(stmt)
             row = result.fetchone()
@@ -52,7 +55,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
             
             return MedioRecepcion(
                 id=row.idMedioRecepcion,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def get_by_id(self, id: UUID) -> Optional[MedioRecepcion]:
@@ -60,7 +64,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idMedioRecepcion,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             ).where(self.table.c.idMedioRecepcion == id)
             
             result = conn.execute(stmt)
@@ -71,7 +76,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
             
             return MedioRecepcion(
                 id=row.idMedioRecepcion,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def get_by_nombre(self, nombre: str) -> Optional[MedioRecepcion]:
@@ -79,7 +85,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idMedioRecepcion,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             ).where(self.table.c.nombre == nombre)
             
             result = conn.execute(stmt)
@@ -90,7 +97,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
             
             return MedioRecepcion(
                 id=row.idMedioRecepcion,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def get_all(self) -> List[MedioRecepcion]:
@@ -98,16 +106,57 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idMedioRecepcion,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             )
             
             result = conn.execute(stmt)
             rows = result.fetchall()
             
             return [
-                MedioRecepcion(id=row.idMedioRecepcion, nombre=row.nombre)
+                MedioRecepcion(id=row.idMedioRecepcion, nombre=row.nombre, archivado=row.archivado)
                 for row in rows
             ]
+    
+    def get_activos(self) -> List[MedioRecepcion]:
+        """Obtiene solo los medios de recepción activos (archivado == False)."""
+        with self._engine.connect() as conn:
+            stmt = select(
+                self.table.c.idMedioRecepcion,
+                self.table.c.nombre,
+                self.table.c.archivado
+            ).where(self.table.c.archivado == False)
+            
+            result = conn.execute(stmt)
+            rows = result.fetchall()
+            
+            return [
+                MedioRecepcion(id=row.idMedioRecepcion, nombre=row.nombre, archivado=row.archivado)
+                for row in rows
+            ]
+    
+    def set_archivado(self, id: UUID, archivado: bool) -> MedioRecepcion:
+        """Archiva o desarchiva un medio de recepción."""
+        with self._engine.connect() as conn:
+            stmt = update(self.table).where(
+                self.table.c.idMedioRecepcion == id
+            ).values(
+                archivado=archivado
+            ).returning(
+                self.table.c.idMedioRecepcion,
+                self.table.c.nombre,
+                self.table.c.archivado
+            )
+            
+            result = conn.execute(stmt)
+            row = result.fetchone()
+            conn.commit()
+            
+            return MedioRecepcion(
+                id=row.idMedioRecepcion,
+                nombre=row.nombre,
+                archivado=row.archivado
+            )
     
     def update(self, medio: MedioRecepcion) -> MedioRecepcion:
         """Actualiza un medio de recepción existente."""
@@ -118,7 +167,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
                 nombre=medio.nombre
             ).returning(
                 self.table.c.idMedioRecepcion,
-                self.table.c.nombre
+                self.table.c.nombre,
+                self.table.c.archivado
             )
             
             result = conn.execute(stmt)
@@ -127,7 +177,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
             
             return MedioRecepcion(
                 id=row.idMedioRecepcion,
-                nombre=row.nombre
+                nombre=row.nombre,
+                archivado=row.archivado
             )
     
     def delete(self, id: UUID) -> None:

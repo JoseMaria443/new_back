@@ -26,18 +26,27 @@ async def create_area(
     try:
         area = Area(nombre=nombre)
         saved = repository.add(area)
-        return {"id": str(saved.id), "nombre": saved.nombre}
+        return {"id": str(saved.id), "nombre": saved.nombre, "archivado": saved.archivado}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=List[dict])
-async def list_areas(
+@router.get("/activos", response_model=List[dict])
+async def list_areas_activos(
     repository: AreaRepository = Depends(get_area_repository)
 ) -> List[dict]:
-    """Lista todas las áreas."""
+    """Lista solo las áreas activas (no archivadas). Para dropdowns/checkboxes."""
+    areas = repository.get_activos()
+    return [{"id": str(a.id), "nombre": a.nombre, "archivado": a.archivado} for a in areas]
+
+
+@router.get("/todos", response_model=List[dict])
+async def list_areas_todos(
+    repository: AreaRepository = Depends(get_area_repository)
+) -> List[dict]:
+    """Lista TODAS las áreas (activas y archivadas). Solo para vista de Configuración."""
     areas = repository.get_all()
-    return [{"id": str(a.id), "nombre": a.nombre} for a in areas]
+    return [{"id": str(a.id), "nombre": a.nombre, "archivado": a.archivado} for a in areas]
 
 
 @router.get("/{area_id}", response_model=dict)
@@ -49,35 +58,19 @@ async def get_area(
     area = repository.get_by_id(area_id)
     if area is None:
         raise HTTPException(status_code=404, detail="Área no encontrada")
-    return {"id": str(area.id), "nombre": area.nombre}
+    return {"id": str(area.id), "nombre": area.nombre, "archivado": area.archivado}
 
 
-@router.put("/{area_id}", response_model=dict)
-async def update_area(
+@router.patch("/{area_id}/archivar", response_model=dict)
+async def archivar_area(
     area_id: UUID,
-    nombre: str,
+    archivado: bool,
     repository: AreaRepository = Depends(get_area_repository)
 ) -> dict:
-    """Actualiza un área existente."""
+    """Archiva (True) o desarchiva (False) un área."""
     area = repository.get_by_id(area_id)
     if area is None:
         raise HTTPException(status_code=404, detail="Área no encontrada")
     
-    try:
-        area.nombre = nombre
-        updated = repository.update(area)
-        return {"id": str(updated.id), "nombre": updated.nombre}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.delete("/{area_id}", status_code=204)
-async def delete_area(
-    area_id: UUID,
-    repository: AreaRepository = Depends(get_area_repository)
-) -> None:
-    """Elimina un área."""
-    area = repository.get_by_id(area_id)
-    if area is None:
-        raise HTTPException(status_code=404, detail="Área no encontrada")
-    repository.delete(area_id)
+    updated = repository.set_archivado(area_id, archivado)
+    return {"id": str(updated.id), "nombre": updated.nombre, "archivado": updated.archivado}
