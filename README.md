@@ -14,17 +14,6 @@ Este proyecto sigue la arquitectura Hexagonal (Puertos y Adaptadores) con los si
 
 ## Instalación
 
-```bash
-# Clonar el repositorio
-git clone <repo-url>
-
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Configurar variables de entorno
-cp .env.example .env
-# Editar .env con las configuraciones apropiadas
-```
 
 ## Ejecución
 
