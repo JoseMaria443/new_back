@@ -61,6 +61,9 @@ from modules.catalogos.infrastructure.entrypoints.api import (
 # Router del módulo de personal
 from modules.personal.infrastructure.entrypoints.api import empleado_router
 
+# Router del módulo de comunicados
+from modules.comunicados.infrastructure.entrypoints.api import comunicado_router
+
 # Registrar routers
 app.include_router(area_router)
 app.include_router(cargo_router)
@@ -70,6 +73,7 @@ app.include_router(rol_destinatario_router)
 app.include_router(rol_responsable_router)
 app.include_router(estado_tarea_router)
 app.include_router(empleado_router)
+app.include_router(comunicado_router)
 
 
 @app.get("/")

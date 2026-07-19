@@ -1,0 +1,207 @@
+"""
+Adaptador de persistencia para el repositorio de Comunicados.
+Usa SQLAlchemy Core, respetando el esquema existente.
+"""
+from uuid import UUID
+from typing import List, Optional, Dict, Any
+from contextlib import contextmanager
+
+from sqlalchemy import Table, Column, String, DateTime, insert, select
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Session
+
+from ...domain.entities import Comunicado
+from ...domain.ports import ComunicadoRepository
+from shared.infrastructure.database.connection import DatabaseConnection
+
+
+class ComunicadoRepositoryAdapter(ComunicadoRepository):
+    """
+    Implementación concreta del repositorio de Comunicados.
+    """
+
+    def __init__(self, session: Optional[Session] = None):
+        self._session = session
+
+    @contextmanager
+    def _get_session(self):
+        """
+        Provee una sesión: reutiliza la inyectada (self._session) si existe,
+        o abre y cierra una nueva con manejo ACID (commit/rollback) si no.
+        """
+        if self._session is not None:
+            yield self._session
+        else:
+            with DatabaseConnection.get_session() as session:
+                yield session
+
+    @property
+    def table(self) -> Table:
+        """Define la tabla COMUNICADO según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "COMUNICADO" in metadata.tables:
+            return metadata.tables["COMUNICADO"]
+        return Table(
+            "COMUNICADO",
+            metadata,
+            Column("idComunicado", PG_UUID(as_uuid=True), primary_key=True),
+            Column("folioDoi", String(100), unique=True, nullable=False),
+            Column("numComunicado", String(50), nullable=False),
+            Column("tema", String(200), nullable=False),
+            Column("fechaEmision", DateTime(timezone=True), nullable=False),
+            Column("fechaRecepcion", DateTime(timezone=True), nullable=False),
+            Column("fechaRegistro", DateTime(timezone=True)),
+            Column("idEmisor", PG_UUID(as_uuid=True), nullable=False),
+            Column("idTipoComunicado", PG_UUID(as_uuid=True), nullable=False),
+            Column("idMedioRecepcion", PG_UUID(as_uuid=True), nullable=False),
+            Column("idEmpleadoRegistro", PG_UUID(as_uuid=True), nullable=False),
+        )
+
+    @property
+    def destinatario_table(self) -> Table:
+        """Define la tabla COMUNICADO_DESTINATARIO según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "COMUNICADO_DESTINATARIO" in metadata.tables:
+            return metadata.tables["COMUNICADO_DESTINATARIO"]
+        return Table(
+            "COMUNICADO_DESTINATARIO",
+            metadata,
+            Column("idComunicado", PG_UUID(as_uuid=True), primary_key=True),
+            Column("idDestinatario", PG_UUID(as_uuid=True), primary_key=True),
+            Column("idRolDestinatario", PG_UUID(as_uuid=True), nullable=False),
+        )
+
+    def add_with_destinatarios(
+        self, comunicado: Comunicado, destinatarios: List[Dict[str, Any]]
+    ) -> Comunicado:
+        """
+        Inserta el comunicado y sus destinatarios en una sola transacción
+        ACID (commit único al final, rollback si cualquier paso falla).
+        fechaRegistro NO se envía: la asigna la base de datos (DEFAULT
+        CURRENT_TIMESTAMP), nunca el cliente.
+        """
+        with self._get_session() as session:
+            stmt = insert(self.table).values(
+                idComunicado=comunicado.id,
+                folioDoi=comunicado.folioDoi,
+                numComunicado=comunicado.numComunicado,
+                tema=comunicado.tema,
+                fechaEmision=comunicado.fechaEmision,
+                fechaRecepcion=comunicado.fechaRecepcion,
+                idEmisor=comunicado.idEmisor,
+                idTipoComunicado=comunicado.idTipoComunicado,
+                idMedioRecepcion=comunicado.idMedioRecepcion,
+                idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
+            ).returning(
+                self.table.c.idComunicado,
+                self.table.c.folioDoi,
+                self.table.c.numComunicado,
+                self.table.c.tema,
+                self.table.c.fechaEmision,
+                self.table.c.fechaRecepcion,
+                self.table.c.fechaRegistro,
+                self.table.c.idEmisor,
+                self.table.c.idTipoComunicado,
+                self.table.c.idMedioRecepcion,
+                self.table.c.idEmpleadoRegistro,
+            )
+            result = session.execute(stmt)
+            row = result.fetchone()
+
+            for dest in destinatarios:
+                session.execute(
+                    insert(self.destinatario_table).values(
+                        idComunicado=row.idComunicado,
+                        idDestinatario=dest["idDestinatario"],
+                        idRolDestinatario=dest["idRolDestinatario"],
+                    )
+                )
+
+            return Comunicado(
+                id=row.idComunicado,
+                folioDoi=row.folioDoi,
+                numComunicado=row.numComunicado,
+                tema=row.tema,
+                fechaEmision=row.fechaEmision,
+                fechaRecepcion=row.fechaRecepcion,
+                fechaRegistro=row.fechaRegistro,
+                idEmisor=row.idEmisor,
+                idTipoComunicado=row.idTipoComunicado,
+                idMedioRecepcion=row.idMedioRecepcion,
+                idEmpleadoRegistro=row.idEmpleadoRegistro,
+            )
+
+    def get_by_id(self, id: UUID) -> Optional[Comunicado]:
+        with self._get_session() as session:
+            stmt = select(self.table).where(self.table.c.idComunicado == id)
+            row = session.execute(stmt).fetchone()
+            if row is None:
+                return None
+            return Comunicado(
+                id=row.idComunicado,
+                folioDoi=row.folioDoi,
+                numComunicado=row.numComunicado,
+                tema=row.tema,
+                fechaEmision=row.fechaEmision,
+                fechaRecepcion=row.fechaRecepcion,
+                fechaRegistro=row.fechaRegistro,
+                idEmisor=row.idEmisor,
+                idTipoComunicado=row.idTipoComunicado,
+                idMedioRecepcion=row.idMedioRecepcion,
+                idEmpleadoRegistro=row.idEmpleadoRegistro,
+            )
+
+    def get_by_folio_doi(self, folio_doi: str) -> Optional[Comunicado]:
+        with self._get_session() as session:
+            stmt = select(self.table).where(self.table.c.folioDoi == folio_doi)
+            row = session.execute(stmt).fetchone()
+            if row is None:
+                return None
+            return Comunicado(
+                id=row.idComunicado,
+                folioDoi=row.folioDoi,
+                numComunicado=row.numComunicado,
+                tema=row.tema,
+                fechaEmision=row.fechaEmision,
+                fechaRecepcion=row.fechaRecepcion,
+                fechaRegistro=row.fechaRegistro,
+                idEmisor=row.idEmisor,
+                idTipoComunicado=row.idTipoComunicado,
+                idMedioRecepcion=row.idMedioRecepcion,
+                idEmpleadoRegistro=row.idEmpleadoRegistro,
+            )
+
+    def get_all(self) -> List[Comunicado]:
+        with self._get_session() as session:
+            stmt = select(self.table)
+            rows = session.execute(stmt).fetchall()
+            return [
+                Comunicado(
+                    id=row.idComunicado,
+                    folioDoi=row.folioDoi,
+                    numComunicado=row.numComunicado,
+                    tema=row.tema,
+                    fechaEmision=row.fechaEmision,
+                    fechaRecepcion=row.fechaRecepcion,
+                    fechaRegistro=row.fechaRegistro,
+                    idEmisor=row.idEmisor,
+                    idTipoComunicado=row.idTipoComunicado,
+                    idMedioRecepcion=row.idMedioRecepcion,
+                    idEmpleadoRegistro=row.idEmpleadoRegistro,
+                )
+                for row in rows
+            ]
+
+    def get_destinatarios(self, id_comunicado: UUID) -> List[Dict[str, Any]]:
+        with self._get_session() as session:
+            stmt = select(self.destinatario_table).where(
+                self.destinatario_table.c.idComunicado == id_comunicado
+            )
+            rows = session.execute(stmt).fetchall()
+            return [
+                {
+                    "idDestinatario": row.idDestinatario,
+                    "idRolDestinatario": row.idRolDestinatario,
+                }
+                for row in rows
+            ]
