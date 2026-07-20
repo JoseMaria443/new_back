@@ -1,6 +1,6 @@
 """
 Script utilitario de inicialización (Seeder).
-Crea los registros iniciales requeridos para la primera autenticación en la API:
+Crea las tablas en la base de datos e inserta los registros iniciales requeridos:
 - Área: Dirección General
 - Cargo: Administrador de Sistema / Administrador
 - Empleado: Administrador Sistema (email: admin@sistema.com, pass: Admin123!)
@@ -13,14 +13,68 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from shared.infrastructure.database.connection import DatabaseConnection
 from shared.infrastructure.security.security import get_password_hash
-from modules.catalogos.infrastructure.persistence import AreaRepositoryAdapter, CargoRepositoryAdapter
+
+from modules.catalogos.infrastructure.persistence import (
+    AreaRepositoryAdapter,
+    CargoRepositoryAdapter,
+    TipoComunicadoRepositoryAdapter,
+    MedioRecepcionRepositoryAdapter,
+    RolDestinatarioRepositoryAdapter,
+    RolResponsableRepositoryAdapter,
+    EstadoTareaRepositoryAdapter,
+)
 from modules.catalogos.domain.entities import Area, Cargo
-from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
+from modules.personal.infrastructure.persistence import (
+    EmpleadoRepositoryAdapter,
+    HistorialEstatusRepositoryAdapter,
+)
 from modules.personal.domain.entities import Empleado
+from modules.comunicados.infrastructure.persistence import ComunicadoRepositoryAdapter
+from modules.tareas.infrastructure.persistence import TareaRepositoryAdapter
+
+
+def init_db_tables():
+    """Registra todos los esquemas de tablas en metadata y ejecuta create_all."""
+    area_repo = AreaRepositoryAdapter()
+    cargo_repo = CargoRepositoryAdapter()
+    tipo_repo = TipoComunicadoRepositoryAdapter()
+    medio_repo = MedioRecepcionRepositoryAdapter()
+    rol_dest_repo = RolDestinatarioRepositoryAdapter()
+    rol_resp_repo = RolResponsableRepositoryAdapter()
+    estado_repo = EstadoTareaRepositoryAdapter()
+    empleado_repo = EmpleadoRepositoryAdapter()
+    historial_repo = HistorialEstatusRepositoryAdapter()
+    comunicado_repo = ComunicadoRepositoryAdapter()
+    tarea_repo = TareaRepositoryAdapter()
+
+    # Forzar evaluación de propiedades .table y relacionales
+    _ = [
+        area_repo.table,
+        cargo_repo.table,
+        tipo_repo.table,
+        medio_repo.table,
+        rol_dest_repo.table,
+        rol_resp_repo.table,
+        estado_repo.table,
+        empleado_repo.table,
+        historial_repo.table,
+        comunicado_repo.table,
+        comunicado_repo.destinatario_table,
+        tarea_repo.table,
+        tarea_repo.responsable_table,
+    ]
+
+    engine = DatabaseConnection.get_engine()
+    metadata = DatabaseConnection.get_metadata()
+    metadata.create_all(bind=engine)
+    print("🧱 Tablas de la base de datos creadas/verificadas correctamente con metadata.create_all().")
 
 
 def seed():
     print("🌱 Iniciando proceso de seeding inicial...")
+
+    # 0. Crear tablas automáticamente antes del seeding
+    init_db_tables()
 
     area_repo = AreaRepositoryAdapter()
     cargo_repo = CargoRepositoryAdapter()
