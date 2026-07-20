@@ -1,15 +1,17 @@
 """
-Router de API para el recurso Comunicado.
+Router de API para el recurso Comunicado (Sección IV SGC2I).
 """
 from uuid import UUID
-from typing import List, Optional
-from datetime import datetime
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 
 from ....domain.entities import Comunicado, EstadoComunicado
 from ....domain.ports import ComunicadoRepository
 from ....infrastructure.persistence import ComunicadoRepositoryAdapter
+from ....application.dtos import (
+    ComunicadoCreateRequest,
+    ComunicadoResponse,
+)
 from ....application.use_cases import CreateComunicadoUseCase
 
 from modules.personal.domain.ports import EmpleadoRepository
@@ -56,62 +58,26 @@ def get_rol_destinatario_repository() -> RolDestinatarioRepository:
     return RolDestinatarioRepositoryAdapter()
 
 
-class DestinatarioIn(BaseModel):
-    idDestinatario: UUID
-    idRolDestinatario: UUID
-
-
-class CreateComunicadoRequest(BaseModel):
-    folioDoi: str
-    numComunicado: str
-    tema: str
-    fechaEmision: datetime
-    fechaRecepcion: datetime
-    idEmisor: UUID
-    idTipoComunicado: UUID
-    idMedioRecepcion: UUID
-    destinatarios: List[DestinatarioIn]
-    # idEmpleadoRegistro y fechaRegistro NUNCA se aceptan del payload:
-    # se inyectan desde el JWT y desde la base de datos, respectivamente.
-
-
-class ComunicadoResponse(BaseModel):
-    id: str
-    folioDoi: str
-    numComunicado: str
-    tema: str
-    fechaEmision: datetime
-    fechaRecepcion: datetime
-    fechaRegistro: Optional[datetime]
-    idEmisor: str
-    idTipoComunicado: str
-    idMedioRecepcion: str
-    idEmpleadoRegistro: str
-    idEstadoComunicado: str
-
-
 def _to_response(comunicado: Comunicado) -> ComunicadoResponse:
     return ComunicadoResponse(
-        id=str(comunicado.id),
+        id=comunicado.id,
         folioDoi=comunicado.folioDoi,
         numComunicado=comunicado.numComunicado,
         tema=comunicado.tema,
         fechaEmision=comunicado.fechaEmision,
         fechaRecepcion=comunicado.fechaRecepcion,
         fechaRegistro=comunicado.fechaRegistro,
-        idEmisor=str(comunicado.idEmisor),
-        idTipoComunicado=str(comunicado.idTipoComunicado),
-        idMedioRecepcion=str(comunicado.idMedioRecepcion),
-        idEmpleadoRegistro=str(comunicado.idEmpleadoRegistro),
-        # Enum en código (no persistido): siempre PENDIENTE al crear.
-        # Se enriquecerá con transiciones reales en la Sección V (Tareas).
+        idEmisor=comunicado.idEmisor,
+        idTipoComunicado=comunicado.idTipoComunicado,
+        idMedioRecepcion=comunicado.idMedioRecepcion,
+        idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
         idEstadoComunicado=EstadoComunicado.PENDIENTE.value,
     )
 
 
-@router.post("/", response_model=ComunicadoResponse, status_code=201)
+@router.post("/", response_model=ComunicadoResponse, status_code=status.HTTP_201_CREATED)
 async def create_comunicado(
-    request: CreateComunicadoRequest,
+    request: ComunicadoCreateRequest,
     current_user: dict = Depends(get_current_active_user),
     repository: ComunicadoRepository = Depends(get_comunicado_repository),
     empleado_repository: EmpleadoRepository = Depends(get_empleado_repository),
@@ -120,10 +86,10 @@ async def create_comunicado(
     rol_destinatario_repository: RolDestinatarioRepository = Depends(get_rol_destinatario_repository),
 ) -> ComunicadoResponse:
     """
-    Crea un nuevo comunicado con sus destinatarios.
-    idEmpleadoRegistro se toma del JWT (nunca del payload).
+    Crea un nuevo comunicado con sus destinatarios en una sola transacción.
+    idEmpleadoRegistro se inyecta desde el JWT de autenticación.
     fechaRegistro la asigna la base de datos (nunca el cliente).
-    Requiere JWT válido (cualquier empleado autenticado).
+    Requiere JWT válido.
     """
     idEmpleadoRegistro = UUID(current_user["idEmpleado"])
 
@@ -149,9 +115,7 @@ async def create_comunicado(
             destinatarios=[d.model_dump() for d in request.destinatarios],
         )
         return _to_response(comunicado)
-    except BusinessRuleViolationError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ValueError as e:
+    except (BusinessRuleViolationError, ValueError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 

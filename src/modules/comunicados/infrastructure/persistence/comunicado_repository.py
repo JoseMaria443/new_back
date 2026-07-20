@@ -81,55 +81,62 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
         CURRENT_TIMESTAMP), nunca el cliente.
         """
         with self._get_session() as session:
-            stmt = insert(self.table).values(
-                idComunicado=comunicado.id,
-                folioDoi=comunicado.folioDoi,
-                numComunicado=comunicado.numComunicado,
-                tema=comunicado.tema,
-                fechaEmision=comunicado.fechaEmision,
-                fechaRecepcion=comunicado.fechaRecepcion,
-                idEmisor=comunicado.idEmisor,
-                idTipoComunicado=comunicado.idTipoComunicado,
-                idMedioRecepcion=comunicado.idMedioRecepcion,
-                idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
-            ).returning(
-                self.table.c.idComunicado,
-                self.table.c.folioDoi,
-                self.table.c.numComunicado,
-                self.table.c.tema,
-                self.table.c.fechaEmision,
-                self.table.c.fechaRecepcion,
-                self.table.c.fechaRegistro,
-                self.table.c.idEmisor,
-                self.table.c.idTipoComunicado,
-                self.table.c.idMedioRecepcion,
-                self.table.c.idEmpleadoRegistro,
-            )
-            result = session.execute(stmt)
-            row = result.fetchone()
-
-            for dest in destinatarios:
-                session.execute(
-                    insert(self.destinatario_table).values(
-                        idComunicado=row.idComunicado,
-                        idDestinatario=dest["idDestinatario"],
-                        idRolDestinatario=dest["idRolDestinatario"],
-                    )
+            try:
+                stmt = insert(self.table).values(
+                    idComunicado=comunicado.id,
+                    folioDoi=comunicado.folioDoi,
+                    numComunicado=comunicado.numComunicado,
+                    tema=comunicado.tema,
+                    fechaEmision=comunicado.fechaEmision,
+                    fechaRecepcion=comunicado.fechaRecepcion,
+                    idEmisor=comunicado.idEmisor,
+                    idTipoComunicado=comunicado.idTipoComunicado,
+                    idMedioRecepcion=comunicado.idMedioRecepcion,
+                    idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
+                ).returning(
+                    self.table.c.idComunicado,
+                    self.table.c.folioDoi,
+                    self.table.c.numComunicado,
+                    self.table.c.tema,
+                    self.table.c.fechaEmision,
+                    self.table.c.fechaRecepcion,
+                    self.table.c.fechaRegistro,
+                    self.table.c.idEmisor,
+                    self.table.c.idTipoComunicado,
+                    self.table.c.idMedioRecepcion,
+                    self.table.c.idEmpleadoRegistro,
                 )
+                result = session.execute(stmt)
+                row = result.fetchone()
 
-            return Comunicado(
-                id=row.idComunicado,
-                folioDoi=row.folioDoi,
-                numComunicado=row.numComunicado,
-                tema=row.tema,
-                fechaEmision=row.fechaEmision,
-                fechaRecepcion=row.fechaRecepcion,
-                fechaRegistro=row.fechaRegistro,
-                idEmisor=row.idEmisor,
-                idTipoComunicado=row.idTipoComunicado,
-                idMedioRecepcion=row.idMedioRecepcion,
-                idEmpleadoRegistro=row.idEmpleadoRegistro,
-            )
+                for dest in destinatarios:
+                    session.execute(
+                        insert(self.destinatario_table).values(
+                            idComunicado=row.idComunicado,
+                            idDestinatario=dest["idDestinatario"],
+                            idRolDestinatario=dest["idRolDestinatario"],
+                        )
+                    )
+
+                if self._session is not None:
+                    session.commit()
+
+                return Comunicado(
+                    id=row.idComunicado,
+                    folioDoi=row.folioDoi,
+                    numComunicado=row.numComunicado,
+                    tema=row.tema,
+                    fechaEmision=row.fechaEmision,
+                    fechaRecepcion=row.fechaRecepcion,
+                    fechaRegistro=row.fechaRegistro,
+                    idEmisor=row.idEmisor,
+                    idTipoComunicado=row.idTipoComunicado,
+                    idMedioRecepcion=row.idMedioRecepcion,
+                    idEmpleadoRegistro=row.idEmpleadoRegistro,
+                )
+            except Exception:
+                session.rollback()
+                raise
 
     def get_by_id(self, id: UUID) -> Optional[Comunicado]:
         with self._get_session() as session:
