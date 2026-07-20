@@ -2,7 +2,8 @@
 Punto de entrada principal de la aplicación.
 Configura y ejecuta el servidor FastAPI.
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
+from fastapi.security import HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
@@ -15,11 +16,15 @@ from shared.infrastructure.security.rate_limiter import (
 )
 from shared.infrastructure.security.auth_middleware import JWTAuthMiddleware
 
+# Esquema de seguridad global para Swagger UI / OpenAPI
+security_scheme = HTTPBearer(auto_error=False)
+
 # Crear la aplicación FastAPI
 app = FastAPI(
     title="API de Comunicados Institucionales",
     description="Sistema de gestión de comunicados, tareas y evidencias universitarias",
-    version="1.0.0"
+    version="1.0.0",
+    dependencies=[Depends(security_scheme)]
 )
 
 # Configurar rate limiter
