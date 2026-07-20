@@ -34,6 +34,7 @@ from modules.personal.infrastructure.persistence import (
 from modules.personal.domain.entities import Empleado
 from modules.comunicados.infrastructure.persistence import ComunicadoRepositoryAdapter
 from modules.tareas.infrastructure.persistence import TareaRepositoryAdapter
+from modules.evidencias.infrastructure.persistence import EvidenciaRepositoryAdapter
 
 
 def init_db_tables():
@@ -49,6 +50,7 @@ def init_db_tables():
     historial_repo = HistorialEstatusRepositoryAdapter()
     comunicado_repo = ComunicadoRepositoryAdapter()
     tarea_repo = TareaRepositoryAdapter()
+    evidencia_repo = EvidenciaRepositoryAdapter()
 
     metadata = DatabaseConnection.get_metadata()
 
@@ -76,6 +78,8 @@ def init_db_tables():
         comunicado_repo.destinatario_table,
         tarea_repo.table,
         tarea_repo.responsable_table,
+        evidencia_repo.table,
+        evidencia_repo.tarea_evidencia_table,
     ]
 
     engine = DatabaseConnection.get_engine()
