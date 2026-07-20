@@ -64,6 +64,9 @@ from modules.personal.infrastructure.entrypoints.api import empleado_router
 # Router del módulo de comunicados
 from modules.comunicados.infrastructure.entrypoints.api import comunicado_router
 
+# Router del módulo de tareas
+from modules.tareas.infrastructure.entrypoints.api import tarea_router
+
 # Registrar routers
 app.include_router(area_router)
 app.include_router(cargo_router)
@@ -74,6 +77,7 @@ app.include_router(rol_responsable_router)
 app.include_router(estado_tarea_router)
 app.include_router(empleado_router)
 app.include_router(comunicado_router)
+app.include_router(tarea_router)
 
 
 @app.get("/")
