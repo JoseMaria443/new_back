@@ -8,6 +8,11 @@ Crea las tablas en la base de datos e inserta los registros iniciales requeridos
 import sys
 import os
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 # Asegurar que 'src' esté en el sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
