@@ -104,12 +104,13 @@ async def root():
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     """
     Manejador para errores de integridad (duplicados, FK inválidas, etc.).
-    Retorna 409 Conflict con mensaje limpio.
+    Retorna 409 Conflict con mensaje limpio e imprime el detalle en consola.
     """
+    print(f"⚠️ INTEGRITY ERROR en {request.url.path}: {exc}")
     return JSONResponse(
         status_code=409,
         content={
-            "detail": "Conflicto: el recurso ya existe o viola una restricción de integridad"
+            "detail": f"Conflicto: el recurso ya existe o viola una restricción de integridad ({str(exc)})"
         }
     )
 
@@ -118,13 +119,15 @@ async def integrity_error_handler(request: Request, exc: IntegrityError):
 async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
     """
     Manejador genérico para errores de SQLAlchemy.
-    Retorna 500 Internal Server Error con mensaje genérico.
-    Nunca expone la estructura de la BD.
+    Imprime el Traceback real en consola para depuración.
     """
+    import traceback
+    print(f"❌ ERROR REAL DE SQLALCHEMY en {request.url.path}: {exc}")
+    traceback.print_exc()
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "Error interno del servidor"
+            "detail": f"Error interno de base de datos: {str(exc)}"
         }
     )
 

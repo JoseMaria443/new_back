@@ -1,6 +1,8 @@
 """
 Router de API para el recurso Evidencia (Sección V / Fase 3 SGC2I).
 """
+import logging
+import traceback
 from uuid import UUID
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -22,6 +24,7 @@ from modules.catalogos.infrastructure.persistence import EstadoTareaRepositoryAd
 from shared.infrastructure.security.security import get_current_active_user
 from shared.domain.exceptions import BusinessRuleViolationError
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/evidencias", tags=["evidencias"])
 
 
@@ -79,7 +82,17 @@ async def create_evidencia(
         )
         return _to_response(evidencia, id_tarea=request.idTarea)
     except (BusinessRuleViolationError, ValueError) as e:
+        logger.warning("Regla de negocio o validación falló en POST /evidencias/: %s", e)
+        print(f"⚠️ REGLA DE NEGOCIO / VALIDACIÓN EN EVIDENCIA: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        print(f"❌ ERROR REAL EN POST /evidencias/: {str(e)}")
+        traceback.print_exc()
+        logger.error("Error no controlado en POST /evidencias/: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error real del servidor: {str(e)}"
+        )
 
 
 @router.get("/", response_model=List[EvidenciaResponse])

@@ -122,7 +122,16 @@ def seed():
         else:
             print(f"ℹ️ Cargo ya existente: 'Administrador' (ID: {cargo_admin.id})")
 
-        # 3. Crear Empleado Administrador
+        # 3. Crear Estados de Tarea base si no existen
+        estado_repo = EstadoTareaRepositoryAdapter()
+        estados_base = ["asignada", "cancelada", "retrasada", "entregada", "revisada", "rechazada", "terminada"]
+        for st_name in estados_base:
+            if not estado_repo.get_by_nombre(st_name):
+                from modules.catalogos.domain.entities import EstadoTarea
+                estado_repo.add(EstadoTarea(nombre=st_name))
+                print(f"✅ Estado de Tarea creado: '{st_name}'")
+
+        # 4. Crear Empleado Administrador
         admin_email = "admin@sistema.com"
         admin_emp = empleado_repo.get_by_email(admin_email)
         if not admin_emp:
