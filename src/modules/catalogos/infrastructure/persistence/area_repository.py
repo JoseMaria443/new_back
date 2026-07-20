@@ -182,8 +182,8 @@ class AreaRepositoryAdapter(AreaRepository):
             )
     
     def delete(self, id: UUID) -> None:
-        """Elimina un área por su ID."""
+        """Borrado lógico (soft delete) de un área por su ID."""
         with self._engine.connect() as conn:
-            stmt = delete(self.table).where(self.table.c.idArea == id)
+            stmt = update(self.table).where(self.table.c.idArea == id).values(archivado=True)
             conn.execute(stmt)
             conn.commit()

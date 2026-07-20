@@ -182,8 +182,8 @@ class MedioRecepcionRepositoryAdapter(MedioRecepcionRepository):
             )
     
     def delete(self, id: UUID) -> None:
-        """Elimina un medio de recepción por su ID."""
+        """Borrado lógico (soft delete) de un medio de recepción por su ID."""
         with self._engine.connect() as conn:
-            stmt = delete(self.table).where(self.table.c.idMedioRecepcion == id)
+            stmt = update(self.table).where(self.table.c.idMedioRecepcion == id).values(archivado=True)
             conn.execute(stmt)
             conn.commit()

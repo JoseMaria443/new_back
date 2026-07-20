@@ -182,8 +182,8 @@ class CargoRepositoryAdapter(CargoRepository):
             )
     
     def delete(self, id: UUID) -> None:
-        """Elimina un cargo por su ID."""
+        """Borrado lógico (soft delete) de un cargo por su ID."""
         with self._engine.connect() as conn:
-            stmt = delete(self.table).where(self.table.c.idCargo == id)
+            stmt = update(self.table).where(self.table.c.idCargo == id).values(archivado=True)
             conn.execute(stmt)
             conn.commit()

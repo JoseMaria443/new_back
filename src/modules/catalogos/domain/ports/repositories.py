@@ -261,9 +261,4 @@ class EstadoTareaRepository(ABC):
     @abstractmethod
     def update(self, estado: EstadoTarea) -> EstadoTarea:
         """Actualiza un estado de tarea."""
-        pass
-    
-    @abstractmethod
-    def delete(self, id: UUID) -> None:
-        """Elimina un estado de tarea."""
-        pass
+        pass

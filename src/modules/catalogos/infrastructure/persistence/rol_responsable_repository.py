@@ -33,7 +33,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             "ROL_RESPONSABLE",
             metadata,
             Column("idRolResponsable", PG_UUID(as_uuid=True), primary_key=True),
-            Column("descripcionRol", String(100), unique=True, nullable=False),
+            Column("descripcion_rol", String(100), unique=True, nullable=False),
             Column("archivado", Boolean, nullable=False, server_default="false"),
         )
     
@@ -42,11 +42,11 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
         with self._engine.connect() as conn:
             stmt = insert(self.table).values(
                 idRolResponsable=rol.id,
-                descripcionRol=rol.descripcionRol,
+                descripcion_rol=rol.descripcion_rol,
                 archivado=rol.archivado
             ).returning(
                 self.table.c.idRolResponsable,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             result = conn.execute(stmt)
@@ -55,7 +55,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             
             return RolResponsable(
                 id=row.idRolResponsable,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -64,7 +64,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolResponsable,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             ).where(self.table.c.idRolResponsable == id)
             
@@ -76,7 +76,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             
             return RolResponsable(
                 id=row.idRolResponsable,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -85,9 +85,9 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolResponsable,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
-            ).where(self.table.c.descripcionRol == descripcion)
+            ).where(self.table.c.descripcion_rol == descripcion)
             
             result = conn.execute(stmt)
             row = result.fetchone()
@@ -97,7 +97,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             
             return RolResponsable(
                 id=row.idRolResponsable,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -106,7 +106,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolResponsable,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             
@@ -114,7 +114,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             rows = result.fetchall()
             
             return [
-                RolResponsable(id=row.idRolResponsable, descripcionRol=row.descripcionRol, archivado=row.archivado)
+                RolResponsable(id=row.idRolResponsable, descripcion_rol=row.descripcion_rol, archivado=row.archivado)
                 for row in rows
             ]
     
@@ -123,7 +123,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolResponsable,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             ).where(self.table.c.archivado == False)
             
@@ -131,7 +131,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             rows = result.fetchall()
             
             return [
-                RolResponsable(id=row.idRolResponsable, descripcionRol=row.descripcionRol, archivado=row.archivado)
+                RolResponsable(id=row.idRolResponsable, descripcion_rol=row.descripcion_rol, archivado=row.archivado)
                 for row in rows
             ]
     
@@ -144,7 +144,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
                 archivado=archivado
             ).returning(
                 self.table.c.idRolResponsable,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             
@@ -154,7 +154,7 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             
             return RolResponsable(
                 id=row.idRolResponsable,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -164,10 +164,10 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             stmt = update(self.table).where(
                 self.table.c.idRolResponsable == rol.id
             ).values(
-                descripcionRol=rol.descripcionRol
+                descripcion_rol=rol.descripcion_rol
             ).returning(
                 self.table.c.idRolResponsable,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             
@@ -177,13 +177,13 @@ class RolResponsableRepositoryAdapter(RolResponsableRepository):
             
             return RolResponsable(
                 id=row.idRolResponsable,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
     def delete(self, id: UUID) -> None:
-        """Elimina un rol de responsable por su ID."""
+        """Borrado lógico (soft delete) de un rol de responsable por su ID."""
         with self._engine.connect() as conn:
-            stmt = delete(self.table).where(self.table.c.idRolResponsable == id)
+            stmt = update(self.table).where(self.table.c.idRolResponsable == id).values(archivado=True)
             conn.execute(stmt)
             conn.commit()

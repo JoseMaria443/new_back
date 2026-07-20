@@ -33,7 +33,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             "ROL_DESTINATARIO",
             metadata,
             Column("idRolDestinatario", PG_UUID(as_uuid=True), primary_key=True),
-            Column("descripcionRol", String(100), unique=True, nullable=False),
+            Column("descripcion_rol", String(100), unique=True, nullable=False),
             Column("archivado", Boolean, nullable=False, server_default="false"),
         )
     
@@ -42,11 +42,11 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
         with self._engine.connect() as conn:
             stmt = insert(self.table).values(
                 idRolDestinatario=rol.id,
-                descripcionRol=rol.descripcionRol,
+                descripcion_rol=rol.descripcion_rol,
                 archivado=rol.archivado
             ).returning(
                 self.table.c.idRolDestinatario,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             result = conn.execute(stmt)
@@ -55,7 +55,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             
             return RolDestinatario(
                 id=row.idRolDestinatario,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -64,7 +64,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolDestinatario,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             ).where(self.table.c.idRolDestinatario == id)
             
@@ -76,7 +76,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             
             return RolDestinatario(
                 id=row.idRolDestinatario,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -85,9 +85,9 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolDestinatario,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
-            ).where(self.table.c.descripcionRol == descripcion)
+            ).where(self.table.c.descripcion_rol == descripcion)
             
             result = conn.execute(stmt)
             row = result.fetchone()
@@ -97,7 +97,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             
             return RolDestinatario(
                 id=row.idRolDestinatario,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -106,7 +106,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolDestinatario,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             
@@ -114,7 +114,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             rows = result.fetchall()
             
             return [
-                RolDestinatario(id=row.idRolDestinatario, descripcionRol=row.descripcionRol, archivado=row.archivado)
+                RolDestinatario(id=row.idRolDestinatario, descripcion_rol=row.descripcion_rol, archivado=row.archivado)
                 for row in rows
             ]
     
@@ -123,7 +123,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idRolDestinatario,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             ).where(self.table.c.archivado == False)
             
@@ -131,7 +131,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             rows = result.fetchall()
             
             return [
-                RolDestinatario(id=row.idRolDestinatario, descripcionRol=row.descripcionRol, archivado=row.archivado)
+                RolDestinatario(id=row.idRolDestinatario, descripcion_rol=row.descripcion_rol, archivado=row.archivado)
                 for row in rows
             ]
     
@@ -144,7 +144,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
                 archivado=archivado
             ).returning(
                 self.table.c.idRolDestinatario,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             
@@ -154,7 +154,7 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             
             return RolDestinatario(
                 id=row.idRolDestinatario,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
@@ -164,10 +164,10 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             stmt = update(self.table).where(
                 self.table.c.idRolDestinatario == rol.id
             ).values(
-                descripcionRol=rol.descripcionRol
+                descripcion_rol=rol.descripcion_rol
             ).returning(
                 self.table.c.idRolDestinatario,
-                self.table.c.descripcionRol,
+                self.table.c.descripcion_rol,
                 self.table.c.archivado
             )
             
@@ -177,13 +177,13 @@ class RolDestinatarioRepositoryAdapter(RolDestinatarioRepository):
             
             return RolDestinatario(
                 id=row.idRolDestinatario,
-                descripcionRol=row.descripcionRol,
+                descripcion_rol=row.descripcion_rol,
                 archivado=row.archivado
             )
     
     def delete(self, id: UUID) -> None:
-        """Elimina un rol de destinatario por su ID."""
+        """Borrado lógico (soft delete) de un rol de destinatario por su ID."""
         with self._engine.connect() as conn:
-            stmt = delete(self.table).where(self.table.c.idRolDestinatario == id)
+            stmt = update(self.table).where(self.table.c.idRolDestinatario == id).values(archivado=True)
             conn.execute(stmt)
             conn.commit()

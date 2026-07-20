@@ -128,11 +128,4 @@ class EstadoTareaRepositoryAdapter(EstadoTareaRepository):
             return EstadoTarea(
                 id=row.idEstadoTarea,
                 nombre=row.nombre
-            )
-    
-    def delete(self, id: UUID) -> None:
-        """Elimina un estado de tarea por su ID."""
-        with self._engine.connect() as conn:
-            stmt = delete(self.table).where(self.table.c.idEstadoTarea == id)
-            conn.execute(stmt)
-            conn.commit()
+            )

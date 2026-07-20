@@ -182,8 +182,8 @@ class TipoComunicadoRepositoryAdapter(TipoComunicadoRepository):
             )
     
     def delete(self, id: UUID) -> None:
-        """Elimina un tipo de comunicado por su ID."""
+        """Borrado lógico (soft delete) de un tipo de comunicado por su ID."""
         with self._engine.connect() as conn:
-            stmt = delete(self.table).where(self.table.c.idTipoComunicado == id)
+            stmt = update(self.table).where(self.table.c.idTipoComunicado == id).values(archivado=True)
             conn.execute(stmt)
             conn.commit()
