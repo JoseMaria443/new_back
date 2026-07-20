@@ -11,6 +11,9 @@ import os
 # Asegurar que 'src' esté en el sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+from sqlalchemy import Table, Column
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
 from shared.infrastructure.database.connection import DatabaseConnection
 from shared.infrastructure.security.security import get_password_hash
 
@@ -47,6 +50,17 @@ def init_db_tables():
     comunicado_repo = ComunicadoRepositoryAdapter()
     tarea_repo = TareaRepositoryAdapter()
 
+    metadata = DatabaseConnection.get_metadata()
+
+    # Registrar explícitamente la tabla intermedia EMPLEADO_CARGO en metadata
+    if "EMPLEADO_CARGO" not in metadata.tables:
+        Table(
+            "EMPLEADO_CARGO",
+            metadata,
+            Column("idEmpleado", PG_UUID(as_uuid=True), primary_key=True),
+            Column("idCargo", PG_UUID(as_uuid=True), primary_key=True),
+        )
+
     # Forzar evaluación de propiedades .table y relacionales
     _ = [
         area_repo.table,
@@ -65,7 +79,6 @@ def init_db_tables():
     ]
 
     engine = DatabaseConnection.get_engine()
-    metadata = DatabaseConnection.get_metadata()
     metadata.create_all(bind=engine)
     print("🧱 Tablas de la base de datos creadas/verificadas correctamente con metadata.create_all().")
 
