@@ -1,35 +1,39 @@
 """
 Router de API para el recurso EstadoTarea.
+Solo expone métodos de lectura por inmutabilidad del catálogo.
 """
 from uuid import UUID
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from ....domain.entities import EstadoTarea
-from ....domain.ports import EstadoTareaRepository
+from ....application.dtos import EstadoTareaResponse
+from ....application.use_cases import EstadoTareaUseCases
 from ....infrastructure.persistence import EstadoTareaRepositoryAdapter
 
 router = APIRouter(prefix="/estados-tarea", tags=["estados-tarea"])
 
 
-def get_estado_tarea_repository() -> EstadoTareaRepository:
-    return EstadoTareaRepositoryAdapter()
+def get_estado_tarea_use_cases() -> EstadoTareaUseCases:
+    """Factory dependency para obtener casos de uso de EstadoTarea."""
+    repository = EstadoTareaRepositoryAdapter()
+    return EstadoTareaUseCases(repository)
 
 
-@router.get("/", response_model=List[dict])
+@router.get("/", response_model=List[EstadoTareaResponse])
 async def list_estados_tarea(
-    repository: EstadoTareaRepository = Depends(get_estado_tarea_repository)
-) -> List[dict]:
-    estados = repository.get_all()
-    return [{"id": str(e.id), "nombre": e.nombre} for e in estados]
+    use_cases: EstadoTareaUseCases = Depends(get_estado_tarea_use_cases)
+) -> List[EstadoTareaResponse]:
+    """Lista todos los estados de tarea."""
+    return use_cases.get_all()
 
 
-@router.get("/{estado_id}", response_model=dict)
+@router.get("/{estado_id}", response_model=EstadoTareaResponse)
 async def get_estado_tarea(
     estado_id: UUID,
-    repository: EstadoTareaRepository = Depends(get_estado_tarea_repository)
-) -> dict:
-    estado = repository.get_by_id(estado_id)
+    use_cases: EstadoTareaUseCases = Depends(get_estado_tarea_use_cases)
+) -> EstadoTareaResponse:
+    """Obtiene un estado de tarea por ID."""
+    estado = use_cases.get_by_id(estado_id)
     if estado is None:
         raise HTTPException(status_code=404, detail="Estado de tarea no encontrado")
-    return {"id": str(estado.id), "nombre": estado.nombre}
+    return estado

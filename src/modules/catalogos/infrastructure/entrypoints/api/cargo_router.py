@@ -3,71 +3,69 @@ Router de API para el recurso Cargo.
 """
 from uuid import UUID
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from ....domain.entities import Cargo
-from ....domain.ports import CargoRepository
+from ....application.dtos import CargoCreateRequest, CargoResponse, ArchivarRequest
+from ....application.use_cases import CargoUseCases
 from ....infrastructure.persistence import CargoRepositoryAdapter
 
 router = APIRouter(prefix="/cargos", tags=["cargos"])
 
 
-def get_cargo_repository() -> CargoRepository:
-    return CargoRepositoryAdapter()
+def get_cargo_use_cases() -> CargoUseCases:
+    """Factory dependency para obtener casos de uso de Cargo."""
+    repository = CargoRepositoryAdapter()
+    return CargoUseCases(repository)
 
 
-@router.post("/", response_model=dict)
+@router.post("/", response_model=CargoResponse, status_code=status.HTTP_201_CREATED)
 async def create_cargo(
-    nombre: str,
-    repository: CargoRepository = Depends(get_cargo_repository)
-) -> dict:
+    request: CargoCreateRequest,
+    use_cases: CargoUseCases = Depends(get_cargo_use_cases)
+) -> CargoResponse:
+    """Crea un nuevo cargo."""
     try:
-        cargo = Cargo(nombre=nombre)
-        saved = repository.add(cargo)
-        return {"id": str(saved.id), "nombre": saved.nombre, "archivado": saved.archivado}
+        return use_cases.create(request)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/activos", response_model=List[dict])
+@router.get("/activos", response_model=List[CargoResponse])
 async def list_cargos_activos(
-    repository: CargoRepository = Depends(get_cargo_repository)
-) -> List[dict]:
+    use_cases: CargoUseCases = Depends(get_cargo_use_cases)
+) -> List[CargoResponse]:
     """Lista solo los cargos activos (no archivados). Para dropdowns/checkboxes."""
-    cargos = repository.get_activos()
-    return [{"id": str(c.id), "nombre": c.nombre, "archivado": c.archivado} for c in cargos]
+    return use_cases.get_activos()
 
 
-@router.get("/todos", response_model=List[dict])
+@router.get("/todos", response_model=List[CargoResponse])
 async def list_cargos_todos(
-    repository: CargoRepository = Depends(get_cargo_repository)
-) -> List[dict]:
+    use_cases: CargoUseCases = Depends(get_cargo_use_cases)
+) -> List[CargoResponse]:
     """Lista TODOS los cargos (activos y archivados). Solo para vista de Configuración."""
-    cargos = repository.get_all()
-    return [{"id": str(c.id), "nombre": c.nombre, "archivado": c.archivado} for c in cargos]
+    return use_cases.get_all()
 
 
-@router.get("/{cargo_id}", response_model=dict)
+@router.get("/{cargo_id}", response_model=CargoResponse)
 async def get_cargo(
     cargo_id: UUID,
-    repository: CargoRepository = Depends(get_cargo_repository)
-) -> dict:
-    cargo = repository.get_by_id(cargo_id)
+    use_cases: CargoUseCases = Depends(get_cargo_use_cases)
+) -> CargoResponse:
+    """Obtiene un cargo por ID."""
+    cargo = use_cases.get_by_id(cargo_id)
     if cargo is None:
         raise HTTPException(status_code=404, detail="Cargo no encontrado")
-    return {"id": str(cargo.id), "nombre": cargo.nombre, "archivado": cargo.archivado}
+    return cargo
 
 
-@router.patch("/{cargo_id}/archivar", response_model=dict)
+@router.patch("/{cargo_id}/archivar", response_model=CargoResponse)
 async def archivar_cargo(
     cargo_id: UUID,
-    archivado: bool,
-    repository: CargoRepository = Depends(get_cargo_repository)
-) -> dict:
+    request: ArchivarRequest,
+    use_cases: CargoUseCases = Depends(get_cargo_use_cases)
+) -> CargoResponse:
     """Archiva (True) o desarchiva (False) un cargo."""
-    cargo = repository.get_by_id(cargo_id)
-    if cargo is None:
+    updated = use_cases.set_archivado(cargo_id, request.archivado)
+    if updated is None:
         raise HTTPException(status_code=404, detail="Cargo no encontrado")
-    
-    updated = repository.set_archivado(cargo_id, archivado)
-    return {"id": str(updated.id), "nombre": updated.nombre, "archivado": updated.archivado}
+    return updated

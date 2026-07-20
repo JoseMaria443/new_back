@@ -3,71 +3,69 @@ Router de API para el recurso MedioRecepcion.
 """
 from uuid import UUID
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from ....domain.entities import MedioRecepcion
-from ....domain.ports import MedioRecepcionRepository
+from ....application.dtos import MedioRecepcionCreateRequest, MedioRecepcionResponse, ArchivarRequest
+from ....application.use_cases import MedioRecepcionUseCases
 from ....infrastructure.persistence import MedioRecepcionRepositoryAdapter
 
 router = APIRouter(prefix="/medios-recepcion", tags=["medios-recepcion"])
 
 
-def get_medio_recepcion_repository() -> MedioRecepcionRepository:
-    return MedioRecepcionRepositoryAdapter()
+def get_medio_recepcion_use_cases() -> MedioRecepcionUseCases:
+    """Factory dependency para obtener casos de uso de MedioRecepcion."""
+    repository = MedioRecepcionRepositoryAdapter()
+    return MedioRecepcionUseCases(repository)
 
 
-@router.post("/", response_model=dict)
+@router.post("/", response_model=MedioRecepcionResponse, status_code=status.HTTP_201_CREATED)
 async def create_medio_recepcion(
-    nombre: str,
-    repository: MedioRecepcionRepository = Depends(get_medio_recepcion_repository)
-) -> dict:
+    request: MedioRecepcionCreateRequest,
+    use_cases: MedioRecepcionUseCases = Depends(get_medio_recepcion_use_cases)
+) -> MedioRecepcionResponse:
+    """Crea un nuevo medio de recepción."""
     try:
-        medio = MedioRecepcion(nombre=nombre)
-        saved = repository.add(medio)
-        return {"id": str(saved.id), "nombre": saved.nombre, "archivado": saved.archivado}
+        return use_cases.create(request)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/activos", response_model=List[dict])
+@router.get("/activos", response_model=List[MedioRecepcionResponse])
 async def list_medios_recepcion_activos(
-    repository: MedioRecepcionRepository = Depends(get_medio_recepcion_repository)
-) -> List[dict]:
+    use_cases: MedioRecepcionUseCases = Depends(get_medio_recepcion_use_cases)
+) -> List[MedioRecepcionResponse]:
     """Lista solo los medios de recepción activos (no archivados). Para dropdowns/checkboxes."""
-    medios = repository.get_activos()
-    return [{"id": str(m.id), "nombre": m.nombre, "archivado": m.archivado} for m in medios]
+    return use_cases.get_activos()
 
 
-@router.get("/todos", response_model=List[dict])
+@router.get("/todos", response_model=List[MedioRecepcionResponse])
 async def list_medios_recepcion_todos(
-    repository: MedioRecepcionRepository = Depends(get_medio_recepcion_repository)
-) -> List[dict]:
+    use_cases: MedioRecepcionUseCases = Depends(get_medio_recepcion_use_cases)
+) -> List[MedioRecepcionResponse]:
     """Lista TODOS los medios de recepción (activos y archivados). Solo para vista de Configuración."""
-    medios = repository.get_all()
-    return [{"id": str(m.id), "nombre": m.nombre, "archivado": m.archivado} for m in medios]
+    return use_cases.get_all()
 
 
-@router.get("/{medio_id}", response_model=dict)
+@router.get("/{medio_id}", response_model=MedioRecepcionResponse)
 async def get_medio_recepcion(
     medio_id: UUID,
-    repository: MedioRecepcionRepository = Depends(get_medio_recepcion_repository)
-) -> dict:
-    medio = repository.get_by_id(medio_id)
+    use_cases: MedioRecepcionUseCases = Depends(get_medio_recepcion_use_cases)
+) -> MedioRecepcionResponse:
+    """Obtiene un medio de recepción por ID."""
+    medio = use_cases.get_by_id(medio_id)
     if medio is None:
         raise HTTPException(status_code=404, detail="Medio de recepción no encontrado")
-    return {"id": str(medio.id), "nombre": medio.nombre, "archivado": medio.archivado}
+    return medio
 
 
-@router.patch("/{medio_id}/archivar", response_model=dict)
+@router.patch("/{medio_id}/archivar", response_model=MedioRecepcionResponse)
 async def archivar_medio_recepcion(
     medio_id: UUID,
-    archivado: bool,
-    repository: MedioRecepcionRepository = Depends(get_medio_recepcion_repository)
-) -> dict:
+    request: ArchivarRequest,
+    use_cases: MedioRecepcionUseCases = Depends(get_medio_recepcion_use_cases)
+) -> MedioRecepcionResponse:
     """Archiva (True) o desarchiva (False) un medio de recepción."""
-    medio = repository.get_by_id(medio_id)
-    if medio is None:
+    updated = use_cases.set_archivado(medio_id, request.archivado)
+    if updated is None:
         raise HTTPException(status_code=404, detail="Medio de recepción no encontrado")
-    
-    updated = repository.set_archivado(medio_id, archivado)
-    return {"id": str(updated.id), "nombre": updated.nombre, "archivado": updated.archivado}
+    return updated

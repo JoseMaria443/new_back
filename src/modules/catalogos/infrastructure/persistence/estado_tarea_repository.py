@@ -5,7 +5,7 @@ Usa SQLAlchemy Core con SQL crudo.
 from uuid import UUID
 from typing import List, Optional
 
-from sqlalchemy import Table, Column, String, insert, select, update, delete
+from sqlalchemy import Table, Column, String, insert, select, update
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.engine import Engine
 

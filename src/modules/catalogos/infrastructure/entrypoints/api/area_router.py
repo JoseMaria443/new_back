@@ -3,74 +3,69 @@ Router de API para el recurso Área.
 """
 from uuid import UUID
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from ....domain.entities import Area
-from ....domain.ports import AreaRepository
+from ....application.dtos import AreaCreateRequest, AreaResponse, ArchivarRequest
+from ....application.use_cases import AreaUseCases
 from ....infrastructure.persistence import AreaRepositoryAdapter
 
 router = APIRouter(prefix="/areas", tags=["areas"])
 
 
-def get_area_repository() -> AreaRepository:
-    """Factory para obtener el repositorio de áreas."""
-    return AreaRepositoryAdapter()
+def get_area_use_cases() -> AreaUseCases:
+    """Factory dependency para obtener casos de uso de Área."""
+    repository = AreaRepositoryAdapter()
+    return AreaUseCases(repository)
 
 
-@router.post("/", response_model=dict)
+@router.post("/", response_model=AreaResponse, status_code=status.HTTP_201_CREATED)
 async def create_area(
-    nombre: str,
-    repository: AreaRepository = Depends(get_area_repository)
-) -> dict:
-    """Crea un nuevo área."""
+    request: AreaCreateRequest,
+    use_cases: AreaUseCases = Depends(get_area_use_cases)
+) -> AreaResponse:
+    """Crea una nueva área."""
     try:
-        area = Area(nombre=nombre)
-        saved = repository.add(area)
-        return {"id": str(saved.id), "nombre": saved.nombre, "archivado": saved.archivado}
+        return use_cases.create(request)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/activos", response_model=List[dict])
+@router.get("/activos", response_model=List[AreaResponse])
 async def list_areas_activos(
-    repository: AreaRepository = Depends(get_area_repository)
-) -> List[dict]:
+    use_cases: AreaUseCases = Depends(get_area_use_cases)
+) -> List[AreaResponse]:
     """Lista solo las áreas activas (no archivadas). Para dropdowns/checkboxes."""
-    areas = repository.get_activos()
-    return [{"id": str(a.id), "nombre": a.nombre, "archivado": a.archivado} for a in areas]
+    return use_cases.get_activos()
 
 
-@router.get("/todos", response_model=List[dict])
+@router.get("/todos", response_model=List[AreaResponse])
 async def list_areas_todos(
-    repository: AreaRepository = Depends(get_area_repository)
-) -> List[dict]:
+    use_cases: AreaUseCases = Depends(get_area_use_cases)
+) -> List[AreaResponse]:
     """Lista TODAS las áreas (activas y archivadas). Solo para vista de Configuración."""
-    areas = repository.get_all()
-    return [{"id": str(a.id), "nombre": a.nombre, "archivado": a.archivado} for a in areas]
+    return use_cases.get_all()
 
 
-@router.get("/{area_id}", response_model=dict)
+@router.get("/{area_id}", response_model=AreaResponse)
 async def get_area(
     area_id: UUID,
-    repository: AreaRepository = Depends(get_area_repository)
-) -> dict:
+    use_cases: AreaUseCases = Depends(get_area_use_cases)
+) -> AreaResponse:
     """Obtiene un área por ID."""
-    area = repository.get_by_id(area_id)
+    area = use_cases.get_by_id(area_id)
     if area is None:
         raise HTTPException(status_code=404, detail="Área no encontrada")
-    return {"id": str(area.id), "nombre": area.nombre, "archivado": area.archivado}
+    return area
 
 
-@router.patch("/{area_id}/archivar", response_model=dict)
+@router.patch("/{area_id}/archivar", response_model=AreaResponse)
 async def archivar_area(
     area_id: UUID,
-    archivado: bool,
-    repository: AreaRepository = Depends(get_area_repository)
-) -> dict:
+    request: ArchivarRequest,
+    use_cases: AreaUseCases = Depends(get_area_use_cases)
+) -> AreaResponse:
     """Archiva (True) o desarchiva (False) un área."""
-    area = repository.get_by_id(area_id)
-    if area is None:
+    updated = use_cases.set_archivado(area_id, request.archivado)
+    if updated is None:
         raise HTTPException(status_code=404, detail="Área no encontrada")
-    
-    updated = repository.set_archivado(area_id, archivado)
-    return {"id": str(updated.id), "nombre": updated.nombre, "archivado": updated.archivado}
+    return updated
