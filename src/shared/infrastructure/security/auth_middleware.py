@@ -10,10 +10,14 @@ from starlette.responses import JSONResponse
 from .security import verify_token
 from .exceptions import AuthenticationError, TokenExpiredError
 
-# Únicas rutas públicas permitidas por la Sección I / II de la especificación.
+# Únicas rutas públicas permitidas por la especificación y documentación de la API.
 PUBLIC_PATHS = {
+    "/",
     "/api/empleado/login",
     "/health",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
 }
 
 
