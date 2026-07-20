@@ -88,35 +88,42 @@ class TareaRepositoryAdapter(TareaRepository):
         fechaRegistro NO se envía: la asigna la base de datos.
         """
         with self._get_session() as session:
-            stmt = insert(self.table).values(
-                idTarea=tarea.id,
-                idComunicado=tarea.idComunicado,
-                idEstadoTarea=tarea.idEstadoTarea,
-                resumenActividad=tarea.resumenActividad,
-                descripcion=tarea.descripcion,
-                fechaEntrega=tarea.fechaEntrega,
-            ).returning(
-                self.table.c.idTarea,
-                self.table.c.idComunicado,
-                self.table.c.idEstadoTarea,
-                self.table.c.resumenActividad,
-                self.table.c.descripcion,
-                self.table.c.fechaEntrega,
-                self.table.c.fechaRegistro,
-            )
-            result = session.execute(stmt)
-            row = result.fetchone()
-
-            for resp in responsables:
-                session.execute(
-                    insert(self.responsable_table).values(
-                        idTarea=row.idTarea,
-                        idResponsable=resp["idResponsable"],
-                        idRolResponsable=resp["idRolResponsable"],
-                    )
+            try:
+                stmt = insert(self.table).values(
+                    idTarea=tarea.id,
+                    idComunicado=tarea.idComunicado,
+                    idEstadoTarea=tarea.idEstadoTarea,
+                    resumenActividad=tarea.resumenActividad,
+                    descripcion=tarea.descripcion,
+                    fechaEntrega=tarea.fechaEntrega,
+                ).returning(
+                    self.table.c.idTarea,
+                    self.table.c.idComunicado,
+                    self.table.c.idEstadoTarea,
+                    self.table.c.resumenActividad,
+                    self.table.c.descripcion,
+                    self.table.c.fechaEntrega,
+                    self.table.c.fechaRegistro,
                 )
+                result = session.execute(stmt)
+                row = result.fetchone()
 
-            return self._row_to_tarea(row)
+                for resp in responsables:
+                    session.execute(
+                        insert(self.responsable_table).values(
+                            idTarea=row.idTarea,
+                            idResponsable=resp["idResponsable"],
+                            idRolResponsable=resp["idRolResponsable"],
+                        )
+                    )
+
+                if self._session is not None:
+                    session.commit()
+
+                return self._row_to_tarea(row)
+            except Exception:
+                session.rollback()
+                raise
 
     def get_by_id(self, id: UUID) -> Optional[Tarea]:
         with self._get_session() as session:

@@ -13,10 +13,7 @@ from shared.domain.exceptions import BusinessRuleViolationError
 
 def _as_aware_utc(value: datetime) -> datetime:
     """
-    Normaliza a datetime timezone-aware (UTC). Algunos motores (ej. SQLite,
-    usado en pruebas) no preservan el timezone al leer de vuelta un valor
-    guardado; en Postgres real esto no ocurre, pero se normaliza aquí para
-    que la comparación de fechas sea segura sin importar el motor.
+    Normaliza a datetime timezone-aware (UTC).
     """
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
@@ -27,10 +24,11 @@ class CreateTareaUseCase:
     """
     Caso de uso para registrar una nueva tarea derivada de un comunicado.
 
-    Valida: idComunicado existente, fechaEntrega >= fechaRecepcion del
-    comunicado padre, cada idRolResponsable existente en el catálogo.
-    Fuerza el estado inicial a ASIGNADA, ignorando cualquier estado que
-    mande el cliente (no se acepta idEstadoTarea en el payload).
+    Lógica de Negocio:
+    1. Valida existencia de idComunicado.
+    2. Valida fechaEntrega >= fechaRecepcion del comunicado padre.
+    3. Consulta EstadoTareaRepository buscando el estado "asignada" para inyectar su idEstadoTarea.
+    4. Inserta la tarea y sus responsables transaccionalmente.
     """
 
     def __init__(
@@ -53,20 +51,20 @@ class CreateTareaUseCase:
         fechaEntrega: datetime,
         responsables: List[Dict[str, Any]],
     ) -> Tarea:
-        # idComunicado debe existir
+        # 1. Validar que el comunicado existe
         comunicado = self._comunicado_repository.get_by_id(idComunicado)
         if comunicado is None:
             raise BusinessRuleViolationError(
                 f"El comunicado {idComunicado} no existe"
             )
 
-        # fechaEntrega debe ser mayor o igual a fechaRecepcion del comunicado padre
+        # 2. Validar que fechaEntrega >= fechaRecepcion del comunicado padre
         if _as_aware_utc(fechaEntrega) < _as_aware_utc(comunicado.fechaRecepcion):
             raise BusinessRuleViolationError(
-                "fechaEntrega no puede ser anterior a la fechaRecepcion del comunicado padre"
+                "La fechaEntrega de la tarea no puede ser anterior a la fechaRecepcion del comunicado padre"
             )
 
-        # Cada idRolResponsable debe existir en el catálogo
+        # 3. Validar roles de responsables si el repositorio está disponible
         if self._rol_responsable_repository is not None:
             for resp in responsables:
                 rol_id = resp["idRolResponsable"]
@@ -75,9 +73,13 @@ class CreateTareaUseCase:
                         f"El rol de responsable {rol_id} no existe"
                     )
 
-        # Estado inicial forzado a ASIGNADA (se ignora cualquier estado del cliente)
-        estado_asignada = find_estado_by_nombre(self._estado_tarea_repository, "ASIGNADA")
+        # 4. Obtener el UUID del estado "asignada" desde el catálogo de estados
+        estado_asignada = self._estado_tarea_repository.get_by_nombre("asignada")
+        if estado_asignada is None:
+            # Reintento con fallback si la BD tiene variante de mayúsculas
+            estado_asignada = find_estado_by_nombre(self._estado_tarea_repository, "ASIGNADA")
 
+        # 5. Instanciar la entidad Tarea con idEstadoTarea asignado
         tarea = Tarea(
             idComunicado=idComunicado,
             idEstadoTarea=estado_asignada.id,
@@ -86,4 +88,5 @@ class CreateTareaUseCase:
             fechaEntrega=fechaEntrega,
         )
 
+        # 6. Insertar en TAREA y TAREA_RESPONSABLE transaccionalmente
         return self._repository.add_with_responsables(tarea, responsables)

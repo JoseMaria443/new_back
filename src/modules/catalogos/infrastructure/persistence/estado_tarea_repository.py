@@ -5,7 +5,7 @@ Usa SQLAlchemy Core con SQL crudo.
 from uuid import UUID
 from typing import List, Optional
 
-from sqlalchemy import Table, Column, String, insert, select, update
+from sqlalchemy import Table, Column, String, insert, select, update, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.engine import Engine
 
@@ -75,12 +75,12 @@ class EstadoTareaRepositoryAdapter(EstadoTareaRepository):
             )
     
     def get_by_nombre(self, nombre: str) -> Optional[EstadoTarea]:
-        """Obtiene un estado de tarea por su nombre."""
+        """Obtiene un estado de tarea por su nombre (insensible a mayúsculas/minúsculas)."""
         with self._engine.connect() as conn:
             stmt = select(
                 self.table.c.idEstadoTarea,
                 self.table.c.nombre
-            ).where(self.table.c.nombre == nombre)
+            ).where(func.lower(self.table.c.nombre) == nombre.strip().lower())
             
             result = conn.execute(stmt)
             row = result.fetchone()

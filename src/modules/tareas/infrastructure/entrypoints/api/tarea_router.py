@@ -1,15 +1,18 @@
 """
-Router de API para el recurso Tarea.
+Router de API para el recurso Tarea (Sección V SGC2I).
 """
 from uuid import UUID
-from typing import List, Optional, Dict, Any
+from typing import List, Any
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 
 from ....domain.entities import Tarea
 from ....domain.ports import TareaRepository
 from ....infrastructure.persistence import TareaRepositoryAdapter
+from ....application.dtos import (
+    TareaCreateRequest,
+    TareaResponse,
+)
 from ....application.use_cases import CreateTareaUseCase, TransicionEstadoTareaUseCase
 
 from modules.comunicados.domain.ports import ComunicadoRepository
@@ -42,31 +45,6 @@ def get_rol_responsable_repository() -> RolResponsableRepository:
     return RolResponsableRepositoryAdapter()
 
 
-class ResponsableIn(BaseModel):
-    idResponsable: UUID
-    idRolResponsable: UUID
-
-
-class CreateTareaRequest(BaseModel):
-    idComunicado: UUID
-    resumenActividad: str
-    descripcion: str
-    fechaEntrega: datetime
-    responsables: List[ResponsableIn]
-    # idEstadoTarea NUNCA se acepta del payload: se fuerza a ASIGNADA.
-
-
-class TareaResponse(BaseModel):
-    id: str
-    idComunicado: str
-    resumenActividad: str
-    descripcion: str
-    fechaEntrega: datetime
-    fechaRegistro: Optional[datetime]
-    idEstadoTarea: str
-    estado: str  # nombre del estado, incluyendo VENCIDA calculada
-
-
 def _compute_estado_nombre(estado_real_nombre: str, fecha_entrega: datetime) -> str:
     """
     VENCIDA es una transición calculada (no persistida): si la tarea sigue
@@ -88,20 +66,20 @@ def _to_response(tarea: Tarea, estado_tarea_repository: Any) -> TareaResponse:
     estado = estado_tarea_repository.get_by_id(tarea.idEstadoTarea)
     estado_nombre = estado.nombre if estado is not None else "DESCONOCIDO"
     return TareaResponse(
-        id=str(tarea.id),
-        idComunicado=str(tarea.idComunicado),
+        id=tarea.id,
+        idComunicado=tarea.idComunicado,
+        idEstadoTarea=tarea.idEstadoTarea,
         resumenActividad=tarea.resumenActividad,
         descripcion=tarea.descripcion,
         fechaEntrega=tarea.fechaEntrega,
         fechaRegistro=tarea.fechaRegistro,
-        idEstadoTarea=str(tarea.idEstadoTarea),
         estado=_compute_estado_nombre(estado_nombre, tarea.fechaEntrega),
     )
 
 
-@router.post("/", response_model=TareaResponse, status_code=201)
+@router.post("/", response_model=TareaResponse, status_code=status.HTTP_201_CREATED)
 async def create_tarea(
-    request: CreateTareaRequest,
+    request: TareaCreateRequest,
     current_user: dict = Depends(get_current_active_user),
     repository: TareaRepository = Depends(get_tarea_repository),
     comunicado_repository: ComunicadoRepository = Depends(get_comunicado_repository),
@@ -110,8 +88,8 @@ async def create_tarea(
 ) -> TareaResponse:
     """
     Crea una nueva tarea derivada de un comunicado.
-    Estado inicial forzado a ASIGNADA. Requiere JWT válido (cualquier
-    empleado autenticado).
+    Valida fechas contra el comunicado padre e inyecta el estado inicial 'asignada'.
+    Requiere JWT válido (usuario autenticado).
     """
     use_case = CreateTareaUseCase(
         repository, comunicado_repository, estado_tarea_repository, rol_responsable_repository
@@ -125,9 +103,7 @@ async def create_tarea(
             responsables=[r.model_dump() for r in request.responsables],
         )
         return _to_response(tarea, estado_tarea_repository)
-    except BusinessRuleViolationError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ValueError as e:
+    except (BusinessRuleViolationError, ValueError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
