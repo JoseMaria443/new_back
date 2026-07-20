@@ -15,13 +15,13 @@ class RolResponsable(BaseEntity):
     Mapeo 1:1 con la tabla ROL_RESPONSABLE del esquema SQL.
     """
     # idRolResponsable -> id (heredado de BaseEntity)
-    descripcionRol: str  # VARCHAR(100) UNIQUE NOT NULL
+    descripcion_rol: str  # VARCHAR(100) UNIQUE NOT NULL
     archivado: bool = False
     
     def __post_init__(self) -> None:
         """Validaciones de invariantes."""
-        if not self.descripcionRol or not self.descripcionRol.strip():
+        if not self.descripcion_rol or not self.descripcion_rol.strip():
             raise ValueError("La descripción del rol no puede estar vacía")
         
-        if len(self.descripcionRol) > 100:
+        if len(self.descripcion_rol) > 100:
             raise ValueError("La descripción del rol no puede exceder 100 caracteres")

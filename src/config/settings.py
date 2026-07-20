@@ -12,7 +12,12 @@ class Settings(BaseSettings):
     """
     
     # Base de datos
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/comunicados_db"
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_USER: str = "api_user"
+    DB_PASSWORD: str = "api_password_seguro"
+    DB_NAME: str = "comunicados_db"
+    DATABASE_URL: str = "postgresql://api_user:api_password_seguro@localhost:5432/comunicados_db"
     DATABASE_ECHO: bool = False
     
     # Almacenamiento de archivos
@@ -31,6 +36,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()
