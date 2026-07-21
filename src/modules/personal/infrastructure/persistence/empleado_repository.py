@@ -94,53 +94,60 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
         cualquier paso falla).
         """
         with self._get_session() as session:
-            stmt = insert(self.table).values(
-                idEmpleado=empleado.id,
-                nombre=empleado.nombre,
-                email=empleado.email,
-                idArea=empleado.idArea,
-                activo=empleado.activo,
-                password_hash=empleado.password_hash
-            ).returning(
-                self.table.c.idEmpleado,
-                self.table.c.nombre,
-                self.table.c.email,
-                self.table.c.idArea,
-                self.table.c.activo,
-                self.table.c.fechaRegistro,
-            )
-            
-            result = session.execute(stmt)
-            row = result.fetchone()
-            
-            if cargo_ids:
-                metadata = DatabaseConnection.get_metadata()
-                if "EMPLEADO_CARGO" in metadata.tables:
-                    cargo_table = metadata.tables["EMPLEADO_CARGO"]
-                else:
-                    cargo_table = Table(
-                        "EMPLEADO_CARGO",
-                        metadata,
-                        Column("idEmpleado", PG_UUID(as_uuid=True), primary_key=True),
-                        Column("idCargo", PG_UUID(as_uuid=True), primary_key=True),
-                    )
-                for cargo_id in cargo_ids:
-                    session.execute(
-                        insert(cargo_table).values(
-                            idEmpleado=row.idEmpleado,
-                            idCargo=cargo_id,
+            try:
+                stmt = insert(self.table).values(
+                    idEmpleado=empleado.id,
+                    nombre=empleado.nombre,
+                    email=empleado.email,
+                    idArea=empleado.idArea,
+                    activo=empleado.activo,
+                    password_hash=empleado.password_hash
+                ).returning(
+                    self.table.c.idEmpleado,
+                    self.table.c.nombre,
+                    self.table.c.email,
+                    self.table.c.idArea,
+                    self.table.c.activo,
+                    self.table.c.fechaRegistro,
+                )
+                
+                result = session.execute(stmt)
+                row = result.fetchone()
+                
+                if cargo_ids:
+                    metadata = DatabaseConnection.get_metadata()
+                    if "EMPLEADO_CARGO" in metadata.tables:
+                        cargo_table = metadata.tables["EMPLEADO_CARGO"]
+                    else:
+                        cargo_table = Table(
+                            "EMPLEADO_CARGO",
+                            metadata,
+                            Column("idEmpleado", PG_UUID(as_uuid=True), primary_key=True),
+                            Column("idCargo", PG_UUID(as_uuid=True), primary_key=True),
                         )
-                    )
-            
-            return Empleado(
-                id=row.idEmpleado,
-                nombre=row.nombre,
-                email=row.email,
-                idArea=row.idArea,
-                activo=row.activo,
-                fechaRegistro=row.fechaRegistro,
-                password_hash=empleado.password_hash,
-            )
+                    for cargo_id in cargo_ids:
+                        session.execute(
+                            insert(cargo_table).values(
+                                idEmpleado=row.idEmpleado,
+                                idCargo=cargo_id,
+                            )
+                        )
+                
+                if self._session is not None:
+                    session.commit()
+                
+                return Empleado(
+                    id=row.idEmpleado,
+                    nombre=row.nombre,
+                    email=row.email,
+                    idArea=row.idArea,
+                    activo=row.activo,
+                    fechaRegistro=row.fechaRegistro,
+                    password_hash=empleado.password_hash,
+                )
+            except Exception:
+                session.rollback()
+                raise
     
     def get_by_id(self, id: UUID) -> Optional[Empleado]:
         """Obtiene un empleado por su ID."""
@@ -267,46 +274,52 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
     ) -> Empleado:
         """
         Actualiza el estatus de un empleado y crea registro en HISTORIAL_ESTATUS.
-        Usa transacción ACID.
+        Usa transacción ACID con rollback en caso de fallos.
         """
         with DatabaseConnection.get_session() as session:
-            # Actualizar el estatus del empleado
-            stmt = update(self.table).where(
-                self.table.c.idEmpleado == id
-            ).values(
-                activo=activo
-            ).returning(
-                self.table.c.idEmpleado,
-                self.table.c.nombre,
-                self.table.c.email,
-                self.table.c.idArea,
-                self.table.c.activo,
-                self.table.c.fechaRegistro,
-            )
-            
-            result = session.execute(stmt)
-            row = result.fetchone()
-            
-            # Crear registro en HISTORIAL_ESTATUS
-            historial_repo = HistorialEstatusRepositoryAdapter(session)
-            accion = AccionHistorial.DESACTIVACION if not activo else AccionHistorial.REACTIVACION
-            
-            historial = HistorialEstatus(
-                idEmpleadoAfectado=id,
-                idEmpleadoModifica=idEmpleadoModifica,
-                accion=accion,
-            )
-            historial_repo.add(historial)
-            
-            return Empleado(
-                id=row.idEmpleado,
-                nombre=row.nombre,
-                email=row.email,
-                idArea=row.idArea,
-                activo=row.activo,
-                fechaRegistro=row.fechaRegistro,
-                password_hash=None,
-            )
+            try:
+                # Actualizar el estatus del empleado
+                stmt = update(self.table).where(
+                    self.table.c.idEmpleado == id
+                ).values(
+                    activo=activo
+                ).returning(
+                    self.table.c.idEmpleado,
+                    self.table.c.nombre,
+                    self.table.c.email,
+                    self.table.c.idArea,
+                    self.table.c.activo,
+                    self.table.c.fechaRegistro,
+                )
+                
+                result = session.execute(stmt)
+                row = result.fetchone()
+                
+                # Crear registro en HISTORIAL_ESTATUS
+                historial_repo = HistorialEstatusRepositoryAdapter(session)
+                accion = AccionHistorial.DESACTIVACION if not activo else AccionHistorial.REACTIVACION
+                
+                historial = HistorialEstatus(
+                    idEmpleadoAfectado=id,
+                    idEmpleadoModifica=idEmpleadoModifica,
+                    accion=accion,
+                )
+                historial_repo.add(historial)
+                
+                session.commit()
+                
+                return Empleado(
+                    id=row.idEmpleado,
+                    nombre=row.nombre,
+                    email=row.email,
+                    idArea=row.idArea,
+                    activo=row.activo,
+                    fechaRegistro=row.fechaRegistro,
+                    password_hash=None,
+                )
+            except Exception:
+                session.rollback()
+                raise
     
     def get_cargos(self, idEmpleado: UUID) -> List[UUID]:
         """
