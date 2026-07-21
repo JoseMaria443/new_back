@@ -15,8 +15,8 @@ from shared.domain.exceptions import BusinessRuleViolationError
 class CreateEmpleadoUseCase:
     """
     Caso de uso para crear un nuevo empleado.
-    Valida: email único, idArea existente, cargos existentes; y asigna
-    los cargos en la misma transacción del alta del empleado.
+    Valida: email único, idArea existente y no archivada, cargos existentes y no archivados;
+    y asigna los cargos en la misma transacción del alta del empleado.
     """
     
     def __init__(
@@ -45,19 +45,29 @@ class CreateEmpleadoUseCase:
                 f"Ya existe un empleado registrado con el email {email}"
             )
         
-        # Nota: la validación de "no archivada" queda pendiente hasta que
-        # se decida agregar la columna 'archivado' al esquema (Sección III).
+        # Validar que el área exista y no esté archivada
         if self._area_repository is not None:
-            if self._area_repository.get_by_id(idArea) is None:
+            area = self._area_repository.get_by_id(idArea)
+            if area is None:
                 raise BusinessRuleViolationError(
                     f"El área {idArea} no existe en el catálogo"
                 )
+            if getattr(area, "archivado", False):
+                raise BusinessRuleViolationError(
+                    f"El área '{area.nombre}' está archivada y no puede ser asignada a un empleado"
+                )
         
+        # Validar que los cargos existan y no estén archivados
         if self._cargo_repository is not None:
             for cargo_id in cargos:
-                if self._cargo_repository.get_by_id(cargo_id) is None:
+                cargo = self._cargo_repository.get_by_id(cargo_id)
+                if cargo is None:
                     raise BusinessRuleViolationError(
                         f"El cargo {cargo_id} no existe en el catálogo"
+                    )
+                if getattr(cargo, "archivado", False):
+                    raise BusinessRuleViolationError(
+                        f"El cargo '{cargo.nombre}' está archivado y no puede ser asignado a un empleado"
                     )
         
         password_hash = get_password_hash(password)
