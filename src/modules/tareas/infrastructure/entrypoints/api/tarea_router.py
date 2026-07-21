@@ -211,3 +211,14 @@ async def cancelar_tarea(
 ) -> TareaResponse:
     """Cancela la tarea, sin solicitar evidencias. Solo rol Director."""
     return _transicionar(tarea_id, "CANCELADA", repository, estado_tarea_repository)
+
+
+@router.patch("/{tarea_id}/en-proceso", response_model=TareaResponse)
+async def iniciar_tarea(
+    tarea_id: UUID,
+    current_user: dict = Depends(get_current_active_user),
+    repository: TareaRepository = Depends(get_tarea_repository),
+    estado_tarea_repository: EstadoTareaRepository = Depends(get_estado_tarea_repository),
+) -> TareaResponse:
+    """Cambia el estado de la tarea a EN_PROCESO. Requiere usuario autenticado."""
+    return _transicionar(tarea_id, "EN_PROCESO", repository, estado_tarea_repository)
