@@ -133,9 +133,31 @@ class EvidenciaRepositoryAdapter(EvidenciaRepository):
 
     def get_all(self) -> List[Evidencia]:
         with self._get_session() as session:
-            stmt = select(self.table)
+            stmt = (
+                select(
+                    self.table.c.idArchivoEvidencia,
+                    self.table.c.doi,
+                    self.table.c.descripcion,
+                    self.table.c.urlArchivo,
+                    self.table.c.nombreOriginal,
+                    self.table.c.idElaborador,
+                    self.table.c.fechaRegistro,
+                    self.tarea_evidencia_table.c.idTarea
+                )
+                .select_from(
+                    self.table.outerjoin(
+                        self.tarea_evidencia_table,
+                        self.table.c.idArchivoEvidencia == self.tarea_evidencia_table.c.idArchivoEvidencia
+                    )
+                )
+            )
             rows = session.execute(stmt).fetchall()
-            return [self._row_to_evidencia(row) for row in rows]
+            evidencias = []
+            for row in rows:
+                ev = self._row_to_evidencia(row)
+                ev.idTarea = row.idTarea
+                evidencias.append(ev)
+            return evidencias
 
     def get_by_tarea(self, id_tarea: UUID) -> List[Evidencia]:
         with self._get_session() as session:
