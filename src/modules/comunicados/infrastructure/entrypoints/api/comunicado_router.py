@@ -59,6 +59,19 @@ def get_rol_destinatario_repository() -> RolDestinatarioRepository:
 
 
 def _to_response(comunicado: Comunicado) -> ComunicadoResponse:
+    from modules.tareas.infrastructure.entrypoints.api.tarea_router import _to_response as tarea_to_response
+    from modules.tareas.infrastructure.persistence import TareaRepositoryAdapter
+    from modules.catalogos.infrastructure.persistence import EstadoTareaRepositoryAdapter
+
+    tarea_repo = TareaRepositoryAdapter()
+    estado_repo = EstadoTareaRepositoryAdapter()
+
+    tareas = tarea_repo.get_by_comunicado(comunicado.id)
+    tareas_response = [
+        tarea_to_response(t, estado_repo, tarea_repo)
+        for t in tareas
+    ]
+
     return ComunicadoResponse(
         id=comunicado.id,
         folioDoi=comunicado.folioDoi,
@@ -75,6 +88,7 @@ def _to_response(comunicado: Comunicado) -> ComunicadoResponse:
         areaEmisoraNombre=comunicado.areaEmisoraNombre,
         empleadoRegistroNombre=comunicado.empleadoRegistroNombre,
         archivoUrl=comunicado.archivoUrl,
+        tareas=tareas_response,
     )
 
 

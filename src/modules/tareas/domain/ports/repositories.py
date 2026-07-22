@@ -50,6 +50,11 @@ class TareaRepository(ABC):
         pass
 
     @abstractmethod
+    def get_by_comunicado(self, id_comunicado: UUID) -> List[Tarea]:
+        """Obtiene todas las tareas asociadas a un comunicado."""
+        pass
+
+    @abstractmethod
     def is_responsable(self, id_tarea: UUID, id_empleado: UUID) -> bool:
         """Indica si un empleado es responsable de una tarea."""
         pass

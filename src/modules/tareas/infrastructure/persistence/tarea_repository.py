@@ -204,6 +204,12 @@ class TareaRepositoryAdapter(TareaRepository):
                 for row in rows
             ]
 
+    def get_by_comunicado(self, id_comunicado: UUID) -> List[Tarea]:
+        with self._get_session() as session:
+            stmt = select(self.table).where(self.table.c.idComunicado == id_comunicado)
+            rows = session.execute(stmt).fetchall()
+            return [self._row_to_tarea(row) for row in rows]
+
     def is_responsable(self, id_tarea: UUID, id_empleado: UUID) -> bool:
         with self._get_session() as session:
             stmt = select(self.responsable_table).where(
