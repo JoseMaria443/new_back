@@ -140,7 +140,29 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
 
     def get_by_id(self, id: UUID) -> Optional[Comunicado]:
         with self._get_session() as session:
-            stmt = select(self.table).where(self.table.c.idComunicado == id)
+            from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
+            from modules.catalogos.infrastructure.persistence import AreaRepositoryAdapter
+            
+            emp_table = EmpleadoRepositoryAdapter().table
+            area_table = AreaRepositoryAdapter().table
+            
+            emisor_alias = emp_table.alias("emisor")
+            registro_alias = emp_table.alias("registro")
+            
+            stmt = (
+                select(
+                    self.table,
+                    area_table.c.nombre.label("area_emisora_nombre"),
+                    registro_alias.c.nombre.label("empleado_registro_nombre"),
+                )
+                .select_from(
+                    self.table
+                    .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
+                    .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
+                    .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
+                )
+                .where(self.table.c.idComunicado == id)
+            )
             row = session.execute(stmt).fetchone()
             if row is None:
                 return None
@@ -156,11 +178,35 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 idTipoComunicado=row.idTipoComunicado,
                 idMedioRecepcion=row.idMedioRecepcion,
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
+                areaEmisoraNombre=row.area_emisora_nombre,
+                empleadoRegistroNombre=row.empleado_registro_nombre,
             )
 
     def get_by_folio_doi(self, folio_doi: str) -> Optional[Comunicado]:
         with self._get_session() as session:
-            stmt = select(self.table).where(self.table.c.folioDoi == folio_doi)
+            from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
+            from modules.catalogos.infrastructure.persistence import AreaRepositoryAdapter
+            
+            emp_table = EmpleadoRepositoryAdapter().table
+            area_table = AreaRepositoryAdapter().table
+            
+            emisor_alias = emp_table.alias("emisor")
+            registro_alias = emp_table.alias("registro")
+            
+            stmt = (
+                select(
+                    self.table,
+                    area_table.c.nombre.label("area_emisora_nombre"),
+                    registro_alias.c.nombre.label("empleado_registro_nombre"),
+                )
+                .select_from(
+                    self.table
+                    .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
+                    .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
+                    .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
+                )
+                .where(self.table.c.folioDoi == folio_doi)
+            )
             row = session.execute(stmt).fetchone()
             if row is None:
                 return None
@@ -176,11 +222,34 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 idTipoComunicado=row.idTipoComunicado,
                 idMedioRecepcion=row.idMedioRecepcion,
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
+                areaEmisoraNombre=row.area_emisora_nombre,
+                empleadoRegistroNombre=row.empleado_registro_nombre,
             )
 
     def get_all(self) -> List[Comunicado]:
         with self._get_session() as session:
-            stmt = select(self.table)
+            from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
+            from modules.catalogos.infrastructure.persistence import AreaRepositoryAdapter
+            
+            emp_table = EmpleadoRepositoryAdapter().table
+            area_table = AreaRepositoryAdapter().table
+            
+            emisor_alias = emp_table.alias("emisor")
+            registro_alias = emp_table.alias("registro")
+            
+            stmt = (
+                select(
+                    self.table,
+                    area_table.c.nombre.label("area_emisora_nombre"),
+                    registro_alias.c.nombre.label("empleado_registro_nombre"),
+                )
+                .select_from(
+                    self.table
+                    .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
+                    .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
+                    .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
+                )
+            )
             rows = session.execute(stmt).fetchall()
             return [
                 Comunicado(
@@ -195,6 +264,8 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     idTipoComunicado=row.idTipoComunicado,
                     idMedioRecepcion=row.idMedioRecepcion,
                     idEmpleadoRegistro=row.idEmpleadoRegistro,
+                    areaEmisoraNombre=row.area_emisora_nombre,
+                    empleadoRegistroNombre=row.empleado_registro_nombre,
                 )
                 for row in rows
             ]

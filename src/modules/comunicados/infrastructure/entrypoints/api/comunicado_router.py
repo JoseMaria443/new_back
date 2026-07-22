@@ -72,6 +72,8 @@ def _to_response(comunicado: Comunicado) -> ComunicadoResponse:
         idMedioRecepcion=comunicado.idMedioRecepcion,
         idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
         idEstadoComunicado=EstadoComunicado.PENDIENTE.value,
+        areaEmisoraNombre=comunicado.areaEmisoraNombre,
+        empleadoRegistroNombre=comunicado.empleadoRegistroNombre,
     )
 
 

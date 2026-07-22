@@ -24,6 +24,8 @@ class Comunicado(BaseEntity):
     idMedioRecepcion: UUID  # FK MEDIO_RECEPCION
     idEmpleadoRegistro: UUID  # FK EMPLEADO (inyectado del JWT, nunca del payload)
     fechaRegistro: Optional[datetime] = field(default=None)  # la asigna el servidor/DB
+    areaEmisoraNombre: Optional[str] = field(default=None)
+    empleadoRegistroNombre: Optional[str] = field(default=None)
 
     def __post_init__(self) -> None:
         """Validaciones de invariantes."""

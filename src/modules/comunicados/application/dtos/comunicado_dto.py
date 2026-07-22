@@ -60,5 +60,7 @@ class ComunicadoResponse(BaseModel):
     idMedioRecepcion: UUID
     idEmpleadoRegistro: UUID
     idEstadoComunicado: str
+    areaEmisoraNombre: Optional[str] = None
+    empleadoRegistroNombre: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
