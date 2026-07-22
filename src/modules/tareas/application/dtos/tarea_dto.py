@@ -51,7 +51,7 @@ class EvidenciaResponse(BaseModel):
     doi: str
     nombreOriginal: str
     urlArchivo: str
-    fechaRegistro: Optional[datetime] = None
+    fechaRegistro: Optional[datetime] = None  # Mapeado explícito para serialización
     descripcion: str
     elaboradorNombre: str
 
