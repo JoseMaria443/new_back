@@ -140,7 +140,8 @@ def seed():
         admin_email = "admin@sistema.com"
         admin_emp = empleado_repo.get_by_email(admin_email)
         if not admin_emp:
-            hashed_pw = get_password_hash("Admin123!")
+            admin_pw = os.getenv('ADMIN_INIT_PASSWORD', 'admin_local_dev_123')
+            hashed_pw = get_password_hash(admin_pw)
             new_emp = Empleado(
                 nombre="Administrador Sistema",
                 email=admin_email,
@@ -151,7 +152,7 @@ def seed():
             admin_emp = empleado_repo.add_with_cargos(new_emp, [cargo_admin_sys.id, cargo_admin.id])
             print(f"✅ Empleado Admin creado con éxito:")
             print(f"   - Email: {admin_email}")
-            print(f"   - Contraseña: Admin123!")
+            print(f"   - Contraseña: [ADMIN_INIT_PASSWORD u ocultada por defecto]")
             print(f"   - ID Empleado: {admin_emp.id}")
         else:
             print(f"ℹ️ Empleado Admin ya existente (Email: {admin_email}, ID: {admin_emp.id})")
