@@ -198,18 +198,35 @@ class TareaRepositoryAdapter(TareaRepository):
                 te_table.c.idTarea == id_tarea
             )
             rows = session.execute(stmt).fetchall()
-            return [
-                {
-                    "idArchivoEvidencia": row.idArchivoEvidencia,
+            
+            results = []
+            for row in rows:
+                id_ev = getattr(row, "idArchivoEvidencia", None)
+                if id_ev is None:
+                    id_ev = getattr(row, "idarchivoevidencia", None)
+                    
+                fecha_reg = getattr(row, "fechaRegistro", None)
+                if fecha_reg is None:
+                    fecha_reg = getattr(row, "fecharegistro", None)
+                    
+                url_arch = getattr(row, "urlArchivo", None)
+                if url_arch is None:
+                    url_arch = getattr(row, "urlarchivo", None)
+                    
+                nom_orig = getattr(row, "nombreOriginal", None)
+                if nom_orig is None:
+                    nom_orig = getattr(row, "nombreoriginal", None)
+                    
+                results.append({
+                    "idArchivoEvidencia": id_ev,
                     "doi": row.doi,
-                    "nombreOriginal": row.nombreOriginal,
-                    "urlArchivo": row.urlArchivo,
-                    "fechaRegistro": row.fechaRegistro,
+                    "nombreOriginal": nom_orig,
+                    "urlArchivo": url_arch,
+                    "fechaRegistro": fecha_reg,
                     "descripcion": row.descripcion,
                     "elaboradorNombre": row.elaboradorNombre,
-                }
-                for row in rows
-            ]
+                })
+            return results
 
     def get_by_comunicado(self, id_comunicado: UUID) -> List[Tarea]:
         with self._get_session() as session:
