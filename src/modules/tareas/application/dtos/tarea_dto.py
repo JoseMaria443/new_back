@@ -39,8 +39,8 @@ class TareaCreateRequest(BaseModel):
 
 class ResponsableResponse(BaseModel):
     """DTO de respuesta para un responsable."""
-    idResponsable: UUID
-    idRolResponsable: UUID
+    idEmpleado: UUID
+    nombre: str
 
     model_config = ConfigDict(from_attributes=True)
 

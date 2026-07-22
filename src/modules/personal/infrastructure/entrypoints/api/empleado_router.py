@@ -50,9 +50,10 @@ class CreateEmpleadoRequest(BaseModel):
     """Request para crear empleado."""
     nombre: str
     email: EmailStr
-    password: str
+    password: Optional[str] = None
     idArea: UUID
     cargos: List[UUID] = []
+    acceso_sistema: bool = True
 
 
 class EmpleadoResponse(BaseModel):
@@ -155,6 +156,7 @@ async def create_empleado(
             password=request.password,
             idArea=request.idArea,
             cargos=request.cargos,
+            acceso_sistema=request.acceso_sistema,
         )
         
         return EmpleadoResponse(

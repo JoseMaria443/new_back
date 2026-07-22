@@ -23,7 +23,7 @@ class ComunicadoCreateRequest(BaseModel):
     tema: str = Field(..., max_length=200, description="Tema o asunto del comunicado")
     fechaEmision: datetime = Field(..., description="Fecha de emisión del comunicado")
     fechaRecepcion: datetime = Field(..., description="Fecha de recepción del comunicado")
-    idEmisor: UUID = Field(..., description="UUID del empleado o entidad emisora")
+    emisorNombre: str = Field(..., max_length=200, description="Nombre libre del emisor")
     idTipoComunicado: UUID = Field(..., description="UUID del tipo de comunicado")
     idMedioRecepcion: UUID = Field(..., description="UUID del medio de recepción")
     destinatarios: List[DestinatarioIn] = Field(
@@ -56,7 +56,7 @@ class ComunicadoResponse(BaseModel):
     fechaEmision: datetime
     fechaRecepcion: datetime
     fechaRegistro: Optional[datetime] = None
-    idEmisor: UUID
+    emisorNombre: str
     idTipoComunicado: UUID
     idMedioRecepcion: UUID
     idEmpleadoRegistro: UUID

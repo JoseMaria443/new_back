@@ -51,7 +51,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
             Column("fechaEmision", DateTime(timezone=True), nullable=False),
             Column("fechaRecepcion", DateTime(timezone=True), nullable=False),
             Column("fechaRegistro", DateTime(timezone=True)),
-            Column("idEmisor", PG_UUID(as_uuid=True), nullable=False),
+            Column("emisorNombre", String(250), nullable=False),
             Column("idTipoComunicado", PG_UUID(as_uuid=True), nullable=False),
             Column("idMedioRecepcion", PG_UUID(as_uuid=True), nullable=False),
             Column("idEmpleadoRegistro", PG_UUID(as_uuid=True), nullable=False),
@@ -105,7 +105,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     tema=comunicado.tema,
                     fechaEmision=comunicado.fechaEmision,
                     fechaRecepcion=comunicado.fechaRecepcion,
-                    idEmisor=comunicado.idEmisor,
+                    emisorNombre=comunicado.emisorNombre,
                     idTipoComunicado=comunicado.idTipoComunicado,
                     idMedioRecepcion=comunicado.idMedioRecepcion,
                     idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
@@ -117,7 +117,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     self.table.c.fechaEmision,
                     self.table.c.fechaRecepcion,
                     self.table.c.fechaRegistro,
-                    self.table.c.idEmisor,
+                    self.table.c.emisorNombre,
                     self.table.c.idTipoComunicado,
                     self.table.c.idMedioRecepcion,
                     self.table.c.idEmpleadoRegistro,
@@ -156,7 +156,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     fechaEmision=row.fechaEmision,
                     fechaRecepcion=row.fechaRecepcion,
                     fechaRegistro=row.fechaRegistro,
-                    idEmisor=row.idEmisor,
+                    emisorNombre=row.emisorNombre,
                     idTipoComunicado=row.idTipoComunicado,
                     idMedioRecepcion=row.idMedioRecepcion,
                     idEmpleadoRegistro=row.idEmpleadoRegistro,
@@ -169,26 +169,20 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
     def get_by_id(self, id: UUID) -> Optional[Comunicado]:
         with self._get_session() as session:
             from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
-            from modules.catalogos.infrastructure.persistence import AreaRepositoryAdapter
             
             emp_table = EmpleadoRepositoryAdapter().table
-            area_table = AreaRepositoryAdapter().table
             archivo_table = self.archivo_table
             
-            emisor_alias = emp_table.alias("emisor")
             registro_alias = emp_table.alias("registro")
             
             stmt = (
                 select(
                     self.table,
-                    area_table.c.nombre.label("area_emisora_nombre"),
                     registro_alias.c.nombre.label("empleado_registro_nombre"),
                     archivo_table.c.urlArchivo.label("archivo_url"),
                 )
                 .select_from(
                     self.table
-                    .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
-                    .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
                     .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
                     .outerjoin(archivo_table, self.table.c.idComunicado == archivo_table.c.idComunicado)
                 )
@@ -205,11 +199,11 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 fechaEmision=row.fechaEmision,
                 fechaRecepcion=row.fechaRecepcion,
                 fechaRegistro=row.fechaRegistro,
-                idEmisor=row.idEmisor,
+                emisorNombre=row.emisorNombre,
                 idTipoComunicado=row.idTipoComunicado,
                 idMedioRecepcion=row.idMedioRecepcion,
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
-                areaEmisoraNombre=row.area_emisora_nombre,
+                areaEmisoraNombre=None,
                 empleadoRegistroNombre=row.empleado_registro_nombre,
                 archivoUrl=row.archivo_url,
             )
@@ -217,26 +211,20 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
     def get_by_folio_doi(self, folio_doi: str) -> Optional[Comunicado]:
         with self._get_session() as session:
             from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
-            from modules.catalogos.infrastructure.persistence import AreaRepositoryAdapter
             
             emp_table = EmpleadoRepositoryAdapter().table
-            area_table = AreaRepositoryAdapter().table
             archivo_table = self.archivo_table
             
-            emisor_alias = emp_table.alias("emisor")
             registro_alias = emp_table.alias("registro")
             
             stmt = (
                 select(
                     self.table,
-                    area_table.c.nombre.label("area_emisora_nombre"),
                     registro_alias.c.nombre.label("empleado_registro_nombre"),
                     archivo_table.c.urlArchivo.label("archivo_url"),
                 )
                 .select_from(
                     self.table
-                    .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
-                    .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
                     .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
                     .outerjoin(archivo_table, self.table.c.idComunicado == archivo_table.c.idComunicado)
                 )
@@ -253,11 +241,11 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 fechaEmision=row.fechaEmision,
                 fechaRecepcion=row.fechaRecepcion,
                 fechaRegistro=row.fechaRegistro,
-                idEmisor=row.idEmisor,
+                emisorNombre=row.emisorNombre,
                 idTipoComunicado=row.idTipoComunicado,
                 idMedioRecepcion=row.idMedioRecepcion,
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
-                areaEmisoraNombre=row.area_emisora_nombre,
+                areaEmisoraNombre=None,
                 empleadoRegistroNombre=row.empleado_registro_nombre,
                 archivoUrl=row.archivo_url,
             )
@@ -265,26 +253,20 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
     def get_all(self) -> List[Comunicado]:
         with self._get_session() as session:
             from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
-            from modules.catalogos.infrastructure.persistence import AreaRepositoryAdapter
             
             emp_table = EmpleadoRepositoryAdapter().table
-            area_table = AreaRepositoryAdapter().table
             archivo_table = self.archivo_table
             
-            emisor_alias = emp_table.alias("emisor")
             registro_alias = emp_table.alias("registro")
             
             stmt = (
                 select(
                     self.table,
-                    area_table.c.nombre.label("area_emisora_nombre"),
                     registro_alias.c.nombre.label("empleado_registro_nombre"),
                     archivo_table.c.urlArchivo.label("archivo_url"),
                 )
                 .select_from(
                     self.table
-                    .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
-                    .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
                     .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
                     .outerjoin(archivo_table, self.table.c.idComunicado == archivo_table.c.idComunicado)
                 )
@@ -299,11 +281,11 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     fechaEmision=row.fechaEmision,
                     fechaRecepcion=row.fechaRecepcion,
                     fechaRegistro=row.fechaRegistro,
-                    idEmisor=row.idEmisor,
+                    emisorNombre=row.emisorNombre,
                     idTipoComunicado=row.idTipoComunicado,
                     idMedioRecepcion=row.idMedioRecepcion,
                     idEmpleadoRegistro=row.idEmpleadoRegistro,
-                    areaEmisoraNombre=row.area_emisora_nombre,
+                    areaEmisoraNombre=None,
                     empleadoRegistroNombre=row.empleado_registro_nombre,
                     archivoUrl=row.archivo_url,
                 )

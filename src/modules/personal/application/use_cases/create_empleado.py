@@ -33,9 +33,10 @@ class CreateEmpleadoUseCase:
         self,
         nombre: str,
         email: str,
-        password: str,
+        password: Optional[str],
         idArea: UUID,
         cargos: List[UUID],
+        acceso_sistema: bool = True,
     ) -> Empleado:
         """
         Crea un nuevo empleado con sus cargos asignados.
@@ -67,10 +68,17 @@ class CreateEmpleadoUseCase:
                     )
                 if getattr(cargo, "archivado", False):
                     raise BusinessRuleViolationError(
-                        f"El cargo '{cargo.nombre}' está archivado y no puede ser asignado a un empleado"
+                        f"El cargo '{cargo.nombre}' está archivado y no puede ser asignada a un empleado"
                     )
         
-        password_hash = get_password_hash(password)
+        if acceso_sistema:
+            if not password or not password.strip():
+                raise BusinessRuleViolationError(
+                    "La contraseña es requerida cuando el acceso al sistema está habilitado"
+                )
+            password_hash = get_password_hash(password)
+        else:
+            password_hash = None
         
         empleado = Empleado(
             nombre=nombre,

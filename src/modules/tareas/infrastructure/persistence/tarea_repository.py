@@ -153,6 +153,27 @@ class TareaRepositoryAdapter(TareaRepository):
                 for row in rows
             ]
 
+    def get_responsables_detallados(self, id_tarea: UUID) -> List[Dict[str, Any]]:
+        with self._get_session() as session:
+            from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
+            emp_table = EmpleadoRepositoryAdapter().table
+            stmt = select(
+                self.responsable_table.c.idResponsable.label("idEmpleado"),
+                emp_table.c.nombre.label("nombre")
+            ).select_from(
+                self.responsable_table.join(emp_table, self.responsable_table.c.idResponsable == emp_table.c.idEmpleado)
+            ).where(
+                self.responsable_table.c.idTarea == id_tarea
+            )
+            rows = session.execute(stmt).fetchall()
+            return [
+                {
+                    "idEmpleado": row.idEmpleado,
+                    "nombre": row.nombre
+                }
+                for row in rows
+            ]
+
     def is_responsable(self, id_tarea: UUID, id_empleado: UUID) -> bool:
         with self._get_session() as session:
             stmt = select(self.responsable_table).where(

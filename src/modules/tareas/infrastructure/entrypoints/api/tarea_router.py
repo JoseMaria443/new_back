@@ -65,9 +65,10 @@ def _compute_estado_nombre(estado_real_nombre: str, fecha_entrega: datetime) -> 
     return estado_real_nombre
 
 
-def _to_response(tarea: Tarea, estado_tarea_repository: Any) -> TareaResponse:
+def _to_response(tarea: Tarea, estado_tarea_repository: Any, repository: TareaRepository) -> TareaResponse:
     estado = estado_tarea_repository.get_by_id(tarea.idEstadoTarea)
     estado_nombre = estado.nombre if estado is not None else "DESCONOCIDO"
+    responsables = repository.get_responsables_detallados(tarea.id)
     return TareaResponse(
         id=tarea.id,
         idComunicado=tarea.idComunicado,
@@ -77,6 +78,13 @@ def _to_response(tarea: Tarea, estado_tarea_repository: Any) -> TareaResponse:
         fechaEntrega=tarea.fechaEntrega,
         fechaRegistro=tarea.fechaRegistro,
         estado=_compute_estado_nombre(estado_nombre, tarea.fechaEntrega),
+        responsables=[
+            ResponsableResponse(
+                idEmpleado=r["idEmpleado"],
+                nombre=r["nombre"]
+            )
+            for r in responsables
+        ]
     )
 
 
@@ -106,7 +114,7 @@ async def create_tarea(
             responsables=request.responsables,
             colaboradores=request.colaboradores,
         )
-        return _to_response(tarea, estado_tarea_repository)
+        return _to_response(tarea, estado_tarea_repository, repository)
     except (BusinessRuleViolationError, ValueError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -119,7 +127,7 @@ async def list_tareas(
 ) -> List[TareaResponse]:
     """Lista todas las tareas."""
     tareas = repository.get_all()
-    return [_to_response(t, estado_tarea_repository) for t in tareas]
+    return [_to_response(t, estado_tarea_repository, repository) for t in tareas]
 
 
 @router.get("/{tarea_id}", response_model=TareaResponse)
@@ -150,7 +158,7 @@ async def get_tarea(
         use_case = TransicionEstadoTareaUseCase(repository, estado_tarea_repository)
         tarea = use_case.execute(tarea_id, "EN_PROCESO")
 
-    return _to_response(tarea, estado_tarea_repository)
+    return _to_response(tarea, estado_tarea_repository, repository)
 
 
 @router.get("/{tarea_id}/responsables", response_model=List[dict])
@@ -222,7 +230,7 @@ def _transicionar(
     use_case = TransicionEstadoTareaUseCase(repository, estado_tarea_repository)
     try:
         updated_tarea = use_case.execute(tarea_id, nombre_estado_destino)
-        return _to_response(updated_tarea, estado_tarea_repository)
+        return _to_response(updated_tarea, estado_tarea_repository, repository)
     except BusinessRuleViolationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

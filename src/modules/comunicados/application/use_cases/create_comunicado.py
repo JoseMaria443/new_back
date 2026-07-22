@@ -42,7 +42,7 @@ class CreateComunicadoUseCase:
         tema: str,
         fechaEmision: datetime,
         fechaRecepcion: datetime,
-        idEmisor: UUID,
+        emisorNombre: str,
         idTipoComunicado: UUID,
         idMedioRecepcion: UUID,
         idEmpleadoRegistro: UUID,
@@ -55,18 +55,6 @@ class CreateComunicadoUseCase:
             raise BusinessRuleViolationError(
                 f"Ya existe un comunicado con folioDoi {folioDoi}"
             )
-
-        # idEmisor debe ser un empleado activo
-        if self._empleado_repository is not None:
-            emisor = self._empleado_repository.get_by_id(idEmisor)
-            if emisor is None:
-                raise BusinessRuleViolationError(
-                    f"El emisor {idEmisor} no existe"
-                )
-            if not emisor.activo:
-                raise BusinessRuleViolationError(
-                    f"El emisor {idEmisor} no está activo"
-                )
 
         # idTipoComunicado debe existir y no estar archivado
         if self._tipo_comunicado_repository is not None:
@@ -108,7 +96,7 @@ class CreateComunicadoUseCase:
             tema=tema,
             fechaEmision=fechaEmision,
             fechaRecepcion=fechaRecepcion,
-            idEmisor=idEmisor,
+            emisorNombre=emisorNombre,
             idTipoComunicado=idTipoComunicado,
             idMedioRecepcion=idMedioRecepcion,
             idEmpleadoRegistro=idEmpleadoRegistro,

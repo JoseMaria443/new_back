@@ -40,6 +40,11 @@ class TareaRepository(ABC):
         pass
 
     @abstractmethod
+    def get_responsables_detallados(self, id_tarea: UUID) -> List[Dict[str, Any]]:
+        """Obtiene los responsables detallados (idEmpleado, nombre) de una tarea."""
+        pass
+
+    @abstractmethod
     def is_responsable(self, id_tarea: UUID, id_empleado: UUID) -> bool:
         """Indica si un empleado es responsable de una tarea."""
         pass

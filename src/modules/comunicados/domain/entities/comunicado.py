@@ -19,7 +19,7 @@ class Comunicado(BaseEntity):
     tema: str  # VARCHAR(200) NOT NULL
     fechaEmision: datetime  # TIMESTAMP WITH TIME ZONE NOT NULL
     fechaRecepcion: datetime  # TIMESTAMP WITH TIME ZONE NOT NULL
-    idEmisor: UUID  # FK EMPLEADO
+    emisorNombre: str  # Nombre libre del emisor
     idTipoComunicado: UUID  # FK TIPO_COMUNICADO
     idMedioRecepcion: UUID  # FK MEDIO_RECEPCION
     idEmpleadoRegistro: UUID  # FK EMPLEADO (inyectado del JWT, nunca del payload)
