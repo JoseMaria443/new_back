@@ -37,6 +37,7 @@ class EvidenciaRepositoryAdapter(EvidenciaRepository):
         metadata = DatabaseConnection.get_metadata()
         if "ARCHIVO_EVIDENCIA" in metadata.tables:
             return metadata.tables["ARCHIVO_EVIDENCIA"]
+        from sqlalchemy import text
         return Table(
             "ARCHIVO_EVIDENCIA",
             metadata,
@@ -46,7 +47,7 @@ class EvidenciaRepositoryAdapter(EvidenciaRepository):
             Column("urlArchivo", String(500), nullable=False),
             Column("nombreOriginal", String(255), nullable=False),
             Column("idElaborador", PG_UUID(as_uuid=True), nullable=False),
-            Column("fechaRegistro", DateTime(timezone=True)),
+            Column("fechaRegistro", DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP")),
         )
 
     @property
@@ -80,6 +81,7 @@ class EvidenciaRepositoryAdapter(EvidenciaRepository):
         """
         with self._get_session() as session:
             try:
+                from datetime import datetime, timezone
                 stmt = insert(self.table).values(
                     idArchivoEvidencia=evidencia.id,
                     doi=evidencia.doi,
@@ -87,6 +89,7 @@ class EvidenciaRepositoryAdapter(EvidenciaRepository):
                     urlArchivo=evidencia.urlArchivo,
                     nombreOriginal=evidencia.nombreOriginal,
                     idElaborador=evidencia.idElaborador,
+                    fechaRegistro=datetime.now(timezone.utc),
                 ).returning(
                     self.table.c.idArchivoEvidencia,
                     self.table.c.doi,
