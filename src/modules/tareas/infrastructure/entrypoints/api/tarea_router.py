@@ -6,8 +6,11 @@ from typing import List, Any
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from pydantic import BaseModel
+
 from ....domain.entities import Tarea
 from ....domain.ports import TareaRepository
+from ....domain.services import TaskStateMachine
 from ....infrastructure.persistence import TareaRepositoryAdapter
 from ....application.dtos import (
     TareaCreateRequest,
@@ -166,18 +169,81 @@ async def get_responsables(
     ]
 
 
+class EstadoUpdateRequest(BaseModel):
+    estado: str
+
+
 def _transicionar(
     tarea_id: UUID,
     nombre_estado_destino: str,
     repository: TareaRepository,
     estado_tarea_repository: EstadoTareaRepository,
+    current_user: dict,
+    comunicado_repository: Any,
 ) -> TareaResponse:
+    # 1. Obtener la tarea
+    tarea = repository.get_by_id(tarea_id)
+    if tarea is None:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+
+    # 2. Obtener estado actual
+    estado_actual = estado_tarea_repository.get_by_id(tarea.idEstadoTarea)
+    estado_actual_nombre = estado_actual.nombre if estado_actual is not None else "DESCONOCIDO"
+
+    # 3. Obtener responsables de la tarea
+    responsables_db = repository.get_responsables(tarea_id)
+    responsables_ids = [r["idResponsable"] for r in responsables_db]
+
+    # 4. Obtener creador del comunicado
+    comunicado = comunicado_repository.get_by_id(tarea.idComunicado)
+    comunicado_creator_id = comunicado.idEmpleadoRegistro if comunicado is not None else None
+
+    # 5. Extraer info del usuario del JWT
+    user_id = UUID(current_user["idEmpleado"])
+    user_roles = current_user.get("roles", [])
+
+    # 6. Validar transición con la Máquina de Estados (TaskStateMachine)
+    try:
+        TaskStateMachine.validate_transition(
+            current_state_name=estado_actual_nombre,
+            target_state_name=nombre_estado_destino,
+            user_id=user_id,
+            user_roles=user_roles,
+            responsables=responsables_ids,
+            comunicado_creator_id=comunicado_creator_id
+        )
+    except BusinessRuleViolationError as e:
+        if "Solo los usuarios con rol" in str(e) or "Solo los responsables" in str(e) or "Solo el director" in str(e):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # 7. Ejecutar transición
     use_case = TransicionEstadoTareaUseCase(repository, estado_tarea_repository)
     try:
-        tarea = use_case.execute(tarea_id, nombre_estado_destino)
-        return _to_response(tarea, estado_tarea_repository)
+        updated_tarea = use_case.execute(tarea_id, nombre_estado_destino)
+        return _to_response(updated_tarea, estado_tarea_repository)
     except BusinessRuleViolationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.patch("/{tarea_id}/estado", response_model=TareaResponse)
+async def update_tarea_estado(
+    tarea_id: UUID,
+    request: EstadoUpdateRequest,
+    current_user: dict = Depends(get_current_active_user),
+    repository: TareaRepository = Depends(get_tarea_repository),
+    comunicado_repository: ComunicadoRepository = Depends(get_comunicado_repository),
+    estado_tarea_repository: EstadoTareaRepository = Depends(get_estado_tarea_repository),
+) -> TareaResponse:
+    """Actualiza el estado de una tarea aplicando validaciones de Máquina de Estados y RBAC."""
+    return _transicionar(
+        tarea_id,
+        request.estado,
+        repository,
+        estado_tarea_repository,
+        current_user,
+        comunicado_repository
+    )
 
 
 @router.patch("/{tarea_id}/revisar", response_model=TareaResponse)
@@ -185,10 +251,18 @@ async def revisar_tarea(
     tarea_id: UUID,
     current_user: dict = Depends(require_roles(["Director"])),
     repository: TareaRepository = Depends(get_tarea_repository),
+    comunicado_repository: ComunicadoRepository = Depends(get_comunicado_repository),
     estado_tarea_repository: EstadoTareaRepository = Depends(get_estado_tarea_repository),
 ) -> TareaResponse:
     """Aprueba/cierra la tarea (REVISADA). Solo rol Director."""
-    return _transicionar(tarea_id, "REVISADA", repository, estado_tarea_repository)
+    return _transicionar(
+        tarea_id,
+        "REVISADA",
+        repository,
+        estado_tarea_repository,
+        current_user,
+        comunicado_repository
+    )
 
 
 @router.patch("/{tarea_id}/rechazar", response_model=TareaResponse)
@@ -196,10 +270,18 @@ async def rechazar_tarea(
     tarea_id: UUID,
     current_user: dict = Depends(require_roles(["Director"])),
     repository: TareaRepository = Depends(get_tarea_repository),
+    comunicado_repository: ComunicadoRepository = Depends(get_comunicado_repository),
     estado_tarea_repository: EstadoTareaRepository = Depends(get_estado_tarea_repository),
 ) -> TareaResponse:
     """Rechaza la tarea y la regresa a EN_PROCESO. Solo rol Director."""
-    return _transicionar(tarea_id, "EN_PROCESO", repository, estado_tarea_repository)
+    return _transicionar(
+        tarea_id,
+        "EN_PROCESO",
+        repository,
+        estado_tarea_repository,
+        current_user,
+        comunicado_repository
+    )
 
 
 @router.patch("/{tarea_id}/cancelar", response_model=TareaResponse)
@@ -207,10 +289,18 @@ async def cancelar_tarea(
     tarea_id: UUID,
     current_user: dict = Depends(require_roles(["Director"])),
     repository: TareaRepository = Depends(get_tarea_repository),
+    comunicado_repository: ComunicadoRepository = Depends(get_comunicado_repository),
     estado_tarea_repository: EstadoTareaRepository = Depends(get_estado_tarea_repository),
 ) -> TareaResponse:
     """Cancela la tarea, sin solicitar evidencias. Solo rol Director."""
-    return _transicionar(tarea_id, "CANCELADA", repository, estado_tarea_repository)
+    return _transicionar(
+        tarea_id,
+        "CANCELADA",
+        repository,
+        estado_tarea_repository,
+        current_user,
+        comunicado_repository
+    )
 
 
 @router.patch("/{tarea_id}/en-proceso", response_model=TareaResponse)
@@ -218,7 +308,15 @@ async def iniciar_tarea(
     tarea_id: UUID,
     current_user: dict = Depends(get_current_active_user),
     repository: TareaRepository = Depends(get_tarea_repository),
+    comunicado_repository: ComunicadoRepository = Depends(get_comunicado_repository),
     estado_tarea_repository: EstadoTareaRepository = Depends(get_estado_tarea_repository),
 ) -> TareaResponse:
     """Cambia el estado de la tarea a EN_PROCESO. Requiere usuario autenticado."""
-    return _transicionar(tarea_id, "EN_PROCESO", repository, estado_tarea_repository)
+    return _transicionar(
+        tarea_id,
+        "EN_PROCESO",
+        repository,
+        estado_tarea_repository,
+        current_user,
+        comunicado_repository
+    )
