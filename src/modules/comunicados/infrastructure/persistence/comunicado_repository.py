@@ -55,7 +55,6 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
             Column("idTipoComunicado", PG_UUID(as_uuid=True), nullable=False),
             Column("idMedioRecepcion", PG_UUID(as_uuid=True), nullable=False),
             Column("idEmpleadoRegistro", PG_UUID(as_uuid=True), nullable=False),
-            Column("archivoUrl", String(500), nullable=True),
         )
 
     @property
@@ -70,6 +69,22 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
             Column("idComunicado", PG_UUID(as_uuid=True), primary_key=True),
             Column("idDestinatario", PG_UUID(as_uuid=True), primary_key=True),
             Column("idRolDestinatario", PG_UUID(as_uuid=True), nullable=False),
+        )
+
+    @property
+    def archivo_table(self) -> Table:
+        """Define la tabla COMUNICADO_ARCHIVO según el esquema SQL."""
+        metadata = DatabaseConnection.get_metadata()
+        if "COMUNICADO_ARCHIVO" in metadata.tables:
+            return metadata.tables["COMUNICADO_ARCHIVO"]
+        return Table(
+            "COMUNICADO_ARCHIVO",
+            metadata,
+            Column("idArchivo", PG_UUID(as_uuid=True), primary_key=True),
+            Column("idComunicado", PG_UUID(as_uuid=True), nullable=False),
+            Column("urlArchivo", String(500), nullable=False),
+            Column("nombreOriginal", String(255), nullable=False),
+            Column("fechaRegistro", DateTime(timezone=True)),
         )
 
     def add_with_destinatarios(
@@ -94,7 +109,6 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     idTipoComunicado=comunicado.idTipoComunicado,
                     idMedioRecepcion=comunicado.idMedioRecepcion,
                     idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
-                    archivoUrl=comunicado.archivoUrl,
                 ).returning(
                     self.table.c.idComunicado,
                     self.table.c.folioDoi,
@@ -107,7 +121,6 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     self.table.c.idTipoComunicado,
                     self.table.c.idMedioRecepcion,
                     self.table.c.idEmpleadoRegistro,
-                    self.table.c.archivoUrl,
                 )
                 result = session.execute(stmt)
                 row = result.fetchone()
@@ -118,6 +131,17 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                             idComunicado=row.idComunicado,
                             idDestinatario=dest["idDestinatario"],
                             idRolDestinatario=dest["idRolDestinatario"],
+                        )
+                    )
+
+                if comunicado.archivoUrl:
+                    import uuid
+                    session.execute(
+                        insert(self.archivo_table).values(
+                            idArchivo=uuid.uuid4(),
+                            idComunicado=row.idComunicado,
+                            urlArchivo=comunicado.archivoUrl,
+                            nombreOriginal="documento_adjunto.pdf"
                         )
                     )
 
@@ -136,7 +160,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     idTipoComunicado=row.idTipoComunicado,
                     idMedioRecepcion=row.idMedioRecepcion,
                     idEmpleadoRegistro=row.idEmpleadoRegistro,
-                    archivoUrl=row.archivoUrl,
+                    archivoUrl=comunicado.archivoUrl,
                 )
             except Exception:
                 session.rollback()
@@ -149,6 +173,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
             
             emp_table = EmpleadoRepositoryAdapter().table
             area_table = AreaRepositoryAdapter().table
+            archivo_table = self.archivo_table
             
             emisor_alias = emp_table.alias("emisor")
             registro_alias = emp_table.alias("registro")
@@ -158,12 +183,14 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     self.table,
                     area_table.c.nombre.label("area_emisora_nombre"),
                     registro_alias.c.nombre.label("empleado_registro_nombre"),
+                    archivo_table.c.urlArchivo.label("archivo_url"),
                 )
                 .select_from(
                     self.table
                     .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
                     .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
                     .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
+                    .outerjoin(archivo_table, self.table.c.idComunicado == archivo_table.c.idComunicado)
                 )
                 .where(self.table.c.idComunicado == id)
             )
@@ -184,7 +211,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
                 areaEmisoraNombre=row.area_emisora_nombre,
                 empleadoRegistroNombre=row.empleado_registro_nombre,
-                archivoUrl=row.archivoUrl,
+                archivoUrl=row.archivo_url,
             )
 
     def get_by_folio_doi(self, folio_doi: str) -> Optional[Comunicado]:
@@ -194,6 +221,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
             
             emp_table = EmpleadoRepositoryAdapter().table
             area_table = AreaRepositoryAdapter().table
+            archivo_table = self.archivo_table
             
             emisor_alias = emp_table.alias("emisor")
             registro_alias = emp_table.alias("registro")
@@ -203,12 +231,14 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     self.table,
                     area_table.c.nombre.label("area_emisora_nombre"),
                     registro_alias.c.nombre.label("empleado_registro_nombre"),
+                    archivo_table.c.urlArchivo.label("archivo_url"),
                 )
                 .select_from(
                     self.table
                     .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
                     .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
                     .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
+                    .outerjoin(archivo_table, self.table.c.idComunicado == archivo_table.c.idComunicado)
                 )
                 .where(self.table.c.folioDoi == folio_doi)
             )
@@ -229,7 +259,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
                 areaEmisoraNombre=row.area_emisora_nombre,
                 empleadoRegistroNombre=row.empleado_registro_nombre,
-                archivoUrl=row.archivoUrl,
+                archivoUrl=row.archivo_url,
             )
 
     def get_all(self) -> List[Comunicado]:
@@ -239,6 +269,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
             
             emp_table = EmpleadoRepositoryAdapter().table
             area_table = AreaRepositoryAdapter().table
+            archivo_table = self.archivo_table
             
             emisor_alias = emp_table.alias("emisor")
             registro_alias = emp_table.alias("registro")
@@ -248,12 +279,14 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     self.table,
                     area_table.c.nombre.label("area_emisora_nombre"),
                     registro_alias.c.nombre.label("empleado_registro_nombre"),
+                    archivo_table.c.urlArchivo.label("archivo_url"),
                 )
                 .select_from(
                     self.table
                     .join(emisor_alias, self.table.c.idEmisor == emisor_alias.c.idEmpleado)
                     .join(area_table, emisor_alias.c.idArea == area_table.c.idArea)
                     .join(registro_alias, self.table.c.idEmpleadoRegistro == registro_alias.c.idEmpleado)
+                    .outerjoin(archivo_table, self.table.c.idComunicado == archivo_table.c.idComunicado)
                 )
             )
             rows = session.execute(stmt).fetchall()
@@ -272,7 +305,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     idEmpleadoRegistro=row.idEmpleadoRegistro,
                     areaEmisoraNombre=row.area_emisora_nombre,
                     empleadoRegistroNombre=row.empleado_registro_nombre,
-                    archivoUrl=row.archivoUrl,
+                    archivoUrl=row.archivo_url,
                 )
                 for row in rows
             ]
