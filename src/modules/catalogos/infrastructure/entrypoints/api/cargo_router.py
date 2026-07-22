@@ -65,7 +65,15 @@ async def archivar_cargo(
     use_cases: CargoUseCases = Depends(get_cargo_use_cases)
 ) -> CargoResponse:
     """Archiva (True) o desarchiva (False) un cargo."""
+    cargo = use_cases.get_by_id(cargo_id)
+    if cargo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cargo no encontrado")
+    
+    if request.archivado and cargo.nombre.strip().lower() in ["administrador", "director", "docente"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Los roles core del sistema no pueden ser archivados"
+        )
+
     updated = use_cases.set_archivado(cargo_id, request.archivado)
-    if updated is None:
-        raise HTTPException(status_code=404, detail="Cargo no encontrado")
     return updated
