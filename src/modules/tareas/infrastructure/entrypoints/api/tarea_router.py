@@ -16,6 +16,7 @@ from ....application.dtos import (
     TareaCreateRequest,
     TareaResponse,
     ResponsableResponse,
+    EvidenciaResponse,
 )
 from ....application.use_cases import CreateTareaUseCase, TransicionEstadoTareaUseCase
 
@@ -70,6 +71,7 @@ def _to_response(tarea: Tarea, estado_tarea_repository: Any, repository: TareaRe
     estado = estado_tarea_repository.get_by_id(tarea.idEstadoTarea)
     estado_nombre = estado.nombre if estado is not None else "DESCONOCIDO"
     responsables = repository.get_responsables_detallados(tarea.id)
+    evidencias = repository.get_evidencias(tarea.id)
     return TareaResponse(
         id=tarea.id,
         idComunicado=tarea.idComunicado,
@@ -85,6 +87,16 @@ def _to_response(tarea: Tarea, estado_tarea_repository: Any, repository: TareaRe
                 nombre=r["nombre"]
             )
             for r in responsables
+        ],
+        evidencias=[
+            EvidenciaResponse(
+                idArchivoEvidencia=ev["idArchivoEvidencia"],
+                doi=ev["doi"],
+                nombreOriginal=ev["nombreOriginal"],
+                urlArchivo=ev["urlArchivo"],
+                fechaRegistro=ev["fechaRegistro"],
+            )
+            for ev in evidencias
         ]
     )
 

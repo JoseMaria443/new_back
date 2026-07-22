@@ -174,6 +174,36 @@ class TareaRepositoryAdapter(TareaRepository):
                 for row in rows
             ]
 
+    def get_evidencias(self, id_tarea: UUID) -> List[Dict[str, Any]]:
+        with self._get_session() as session:
+            from modules.evidencias.infrastructure.persistence import EvidenciaRepositoryAdapter
+            ev_adapter = EvidenciaRepositoryAdapter()
+            ev_table = ev_adapter.table
+            te_table = ev_adapter.tarea_evidencia_table
+            
+            stmt = select(
+                ev_table.c.idArchivoEvidencia,
+                ev_table.c.doi,
+                ev_table.c.nombreOriginal,
+                ev_table.c.urlArchivo,
+                ev_table.c.fechaRegistro,
+            ).select_from(
+                te_table.join(ev_table, te_table.c.idArchivoEvidencia == ev_table.c.idArchivoEvidencia)
+            ).where(
+                te_table.c.idTarea == id_tarea
+            )
+            rows = session.execute(stmt).fetchall()
+            return [
+                {
+                    "idArchivoEvidencia": row.idArchivoEvidencia,
+                    "doi": row.doi,
+                    "nombreOriginal": row.nombreOriginal,
+                    "urlArchivo": row.urlArchivo,
+                    "fechaRegistro": row.fechaRegistro,
+                }
+                for row in rows
+            ]
+
     def is_responsable(self, id_tarea: UUID, id_empleado: UUID) -> bool:
         with self._get_session() as session:
             stmt = select(self.responsable_table).where(

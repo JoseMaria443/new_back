@@ -45,6 +45,17 @@ class ResponsableResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EvidenciaResponse(BaseModel):
+    """DTO de respuesta para una evidencia vinculada a una tarea."""
+    idArchivoEvidencia: UUID
+    doi: str
+    nombreOriginal: str
+    urlArchivo: str
+    fechaRegistro: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TareaResponse(BaseModel):
     """DTO de respuesta para una Tarea creada/consultada."""
     id: UUID
@@ -56,5 +67,6 @@ class TareaResponse(BaseModel):
     fechaRegistro: Optional[datetime] = None
     estado: Optional[str] = None
     responsables: List[ResponsableResponse] = Field(default_factory=list)
+    evidencias: List[EvidenciaResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)

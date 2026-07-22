@@ -45,6 +45,11 @@ class TareaRepository(ABC):
         pass
 
     @abstractmethod
+    def get_evidencias(self, id_tarea: UUID) -> List[Dict[str, Any]]:
+        """Obtiene las evidencias vinculadas a una tarea."""
+        pass
+
+    @abstractmethod
     def is_responsable(self, id_tarea: UUID, id_empleado: UUID) -> bool:
         """Indica si un empleado es responsable de una tarea."""
         pass
