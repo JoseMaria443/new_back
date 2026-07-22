@@ -234,6 +234,34 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
                 for row in rows
             ]
     
+    def get_by_activo(self, activo: bool) -> List[Empleado]:
+        """Obtiene empleados filtrados por estatus activo."""
+        with self._get_session() as session:
+            stmt = select(
+                self.table.c.idEmpleado,
+                self.table.c.nombre,
+                self.table.c.email,
+                self.table.c.idArea,
+                self.table.c.activo,
+                self.table.c.fechaRegistro,
+            ).where(self.table.c.activo == activo)
+            
+            result = session.execute(stmt)
+            rows = result.fetchall()
+            
+            return [
+                Empleado(
+                    id=row.idEmpleado,
+                    nombre=row.nombre,
+                    email=row.email,
+                    idArea=row.idArea,
+                    activo=row.activo,
+                    fechaRegistro=row.fechaRegistro,
+                    password_hash=None,
+                )
+                for row in rows
+            ]
+    
     def update(self, empleado: Empleado) -> Empleado:
         """Actualiza un empleado existente."""
         with self._get_session() as session:

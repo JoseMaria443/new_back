@@ -129,7 +129,7 @@ def seed():
 
         # 3. Crear Estados de Tarea base si no existen
         estado_repo = EstadoTareaRepositoryAdapter()
-        estados_base = ["asignada", "cancelada", "retrasada", "entregada", "revisada", "rechazada", "terminada"]
+        estados_base = ["asignada", "en proceso", "entregada", "vencida", "revisada", "rechazada", "cancelada"]
         for st_name in estados_base:
             if not estado_repo.get_by_nombre(st_name):
                 from modules.catalogos.domain.entities import EstadoTarea

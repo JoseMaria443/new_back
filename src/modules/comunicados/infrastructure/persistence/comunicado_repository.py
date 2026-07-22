@@ -55,6 +55,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
             Column("idTipoComunicado", PG_UUID(as_uuid=True), nullable=False),
             Column("idMedioRecepcion", PG_UUID(as_uuid=True), nullable=False),
             Column("idEmpleadoRegistro", PG_UUID(as_uuid=True), nullable=False),
+            Column("archivoUrl", String(500), nullable=True),
         )
 
     @property
@@ -93,6 +94,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     idTipoComunicado=comunicado.idTipoComunicado,
                     idMedioRecepcion=comunicado.idMedioRecepcion,
                     idEmpleadoRegistro=comunicado.idEmpleadoRegistro,
+                    archivoUrl=comunicado.archivoUrl,
                 ).returning(
                     self.table.c.idComunicado,
                     self.table.c.folioDoi,
@@ -105,6 +107,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     self.table.c.idTipoComunicado,
                     self.table.c.idMedioRecepcion,
                     self.table.c.idEmpleadoRegistro,
+                    self.table.c.archivoUrl,
                 )
                 result = session.execute(stmt)
                 row = result.fetchone()
@@ -133,6 +136,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     idTipoComunicado=row.idTipoComunicado,
                     idMedioRecepcion=row.idMedioRecepcion,
                     idEmpleadoRegistro=row.idEmpleadoRegistro,
+                    archivoUrl=row.archivoUrl,
                 )
             except Exception:
                 session.rollback()
@@ -180,6 +184,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
                 areaEmisoraNombre=row.area_emisora_nombre,
                 empleadoRegistroNombre=row.empleado_registro_nombre,
+                archivoUrl=row.archivoUrl,
             )
 
     def get_by_folio_doi(self, folio_doi: str) -> Optional[Comunicado]:
@@ -224,6 +229,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                 idEmpleadoRegistro=row.idEmpleadoRegistro,
                 areaEmisoraNombre=row.area_emisora_nombre,
                 empleadoRegistroNombre=row.empleado_registro_nombre,
+                archivoUrl=row.archivoUrl,
             )
 
     def get_all(self) -> List[Comunicado]:
@@ -266,6 +272,7 @@ class ComunicadoRepositoryAdapter(ComunicadoRepository):
                     idEmpleadoRegistro=row.idEmpleadoRegistro,
                     areaEmisoraNombre=row.area_emisora_nombre,
                     empleadoRegistroNombre=row.empleado_registro_nombre,
+                    archivoUrl=row.archivoUrl,
                 )
                 for row in rows
             ]

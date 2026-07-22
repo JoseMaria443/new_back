@@ -74,6 +74,7 @@ def _to_response(comunicado: Comunicado) -> ComunicadoResponse:
         idEstadoComunicado=EstadoComunicado.PENDIENTE.value,
         areaEmisoraNombre=comunicado.areaEmisoraNombre,
         empleadoRegistroNombre=comunicado.empleadoRegistroNombre,
+        archivoUrl=comunicado.archivoUrl,
     )
 
 
@@ -115,6 +116,7 @@ async def create_comunicado(
             idMedioRecepcion=request.idMedioRecepcion,
             idEmpleadoRegistro=idEmpleadoRegistro,
             destinatarios=[d.model_dump() for d in request.destinatarios],
+            archivoUrl=request.archivoUrl,
         )
         return _to_response(comunicado)
     except (BusinessRuleViolationError, ValueError) as e:

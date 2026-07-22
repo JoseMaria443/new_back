@@ -29,6 +29,7 @@ class ComunicadoCreateRequest(BaseModel):
     destinatarios: List[DestinatarioIn] = Field(
         ..., min_items=1, description="Lista de destinatarios asignados"
     )
+    archivoUrl: Optional[str] = Field(None, max_length=500, description="URL opcional del documento adjunto")
 
     @field_validator("folioDoi", "numComunicado", "tema")
     @classmethod
@@ -62,5 +63,6 @@ class ComunicadoResponse(BaseModel):
     idEstadoComunicado: str
     areaEmisoraNombre: Optional[str] = None
     empleadoRegistroNombre: Optional[str] = None
+    archivoUrl: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

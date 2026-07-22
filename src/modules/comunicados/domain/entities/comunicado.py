@@ -26,6 +26,7 @@ class Comunicado(BaseEntity):
     fechaRegistro: Optional[datetime] = field(default=None)  # la asigna el servidor/DB
     areaEmisoraNombre: Optional[str] = field(default=None)
     empleadoRegistroNombre: Optional[str] = field(default=None)
+    archivoUrl: Optional[str] = field(default=None)
 
     def __post_init__(self) -> None:
         """Validaciones de invariantes."""
@@ -43,6 +44,9 @@ class Comunicado(BaseEntity):
             raise ValueError("El tema no puede estar vacío")
         if len(self.tema) > 200:
             raise ValueError("El tema no puede exceder 200 caracteres")
+
+        if self.archivoUrl and len(self.archivoUrl) > 500:
+            raise ValueError("La URL del archivo no puede exceder 500 caracteres")
 
         if self.fechaRecepcion < self.fechaEmision:
             raise ValueError(

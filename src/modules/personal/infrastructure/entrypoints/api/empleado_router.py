@@ -107,6 +107,32 @@ async def login(
         )
 
 
+@router.get("/", response_model=List[EmpleadoResponse])
+async def list_empleados(
+    activo: Optional[bool] = None,
+    current_user: dict = Depends(get_current_active_user),
+    repository: EmpleadoRepository = Depends(get_empleado_repository),
+) -> List[EmpleadoResponse]:
+    """
+    Lista todos los empleados, permitiendo filtrar por estatus activo.
+    """
+    if activo is not None:
+        empleados = repository.get_by_activo(activo)
+    else:
+        empleados = repository.get_all()
+        
+    return [
+        EmpleadoResponse(
+            id=str(emp.id),
+            nombre=emp.nombre,
+            email=emp.email,
+            idArea=str(emp.idArea),
+            activo=emp.activo,
+        )
+        for emp in empleados
+    ]
+
+
 @router.post("/", response_model=EmpleadoResponse, status_code=201)
 async def create_empleado(
     request: CreateEmpleadoRequest,

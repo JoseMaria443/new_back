@@ -47,6 +47,7 @@ class CreateComunicadoUseCase:
         idMedioRecepcion: UUID,
         idEmpleadoRegistro: UUID,
         destinatarios: List[Dict[str, Any]],
+        archivoUrl: Optional[str] = None,
     ) -> Comunicado:
         # folioDoi único (verificación explícita de negocio, además de la
         # constraint UNIQUE de la base de datos)
@@ -111,6 +112,7 @@ class CreateComunicadoUseCase:
             idTipoComunicado=idTipoComunicado,
             idMedioRecepcion=idMedioRecepcion,
             idEmpleadoRegistro=idEmpleadoRegistro,
+            archivoUrl=archivoUrl,
         )
 
         # Insertar comunicado + destinatarios en una sola transacción

@@ -43,6 +43,11 @@ class EmpleadoRepository(ABC):
         pass
     
     @abstractmethod
+    def get_by_activo(self, activo: bool) -> List[Empleado]:
+        """Obtiene empleados filtrados por estatus activo."""
+        pass
+    
+    @abstractmethod
     def update(self, empleado: Empleado) -> Empleado:
         """Actualiza un empleado existente."""
         pass
