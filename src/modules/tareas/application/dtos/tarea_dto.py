@@ -52,6 +52,8 @@ class EvidenciaResponse(BaseModel):
     nombreOriginal: str
     urlArchivo: str
     fechaRegistro: Optional[datetime] = None
+    descripcion: str
+    elaboradorNombre: str
 
     model_config = ConfigDict(from_attributes=True)
 

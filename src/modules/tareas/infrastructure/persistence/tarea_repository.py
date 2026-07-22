@@ -177,9 +177,11 @@ class TareaRepositoryAdapter(TareaRepository):
     def get_evidencias(self, id_tarea: UUID) -> List[Dict[str, Any]]:
         with self._get_session() as session:
             from modules.evidencias.infrastructure.persistence import EvidenciaRepositoryAdapter
+            from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
             ev_adapter = EvidenciaRepositoryAdapter()
             ev_table = ev_adapter.table
             te_table = ev_adapter.tarea_evidencia_table
+            emp_table = EmpleadoRepositoryAdapter().table
             
             stmt = select(
                 ev_table.c.idArchivoEvidencia,
@@ -187,8 +189,11 @@ class TareaRepositoryAdapter(TareaRepository):
                 ev_table.c.nombreOriginal,
                 ev_table.c.urlArchivo,
                 ev_table.c.fechaRegistro,
+                ev_table.c.descripcion,
+                emp_table.c.nombre.label("elaboradorNombre"),
             ).select_from(
                 te_table.join(ev_table, te_table.c.idArchivoEvidencia == ev_table.c.idArchivoEvidencia)
+                .join(emp_table, ev_table.c.idElaborador == emp_table.c.idEmpleado)
             ).where(
                 te_table.c.idTarea == id_tarea
             )
@@ -200,6 +205,8 @@ class TareaRepositoryAdapter(TareaRepository):
                     "nombreOriginal": row.nombreOriginal,
                     "urlArchivo": row.urlArchivo,
                     "fechaRegistro": row.fechaRegistro,
+                    "descripcion": row.descripcion,
+                    "elaboradorNombre": row.elaboradorNombre,
                 }
                 for row in rows
             ]

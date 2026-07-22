@@ -95,6 +95,8 @@ def _to_response(tarea: Tarea, estado_tarea_repository: Any, repository: TareaRe
                 nombreOriginal=ev["nombreOriginal"],
                 urlArchivo=ev["urlArchivo"],
                 fechaRegistro=ev["fechaRegistro"],
+                descripcion=ev["descripcion"],
+                elaboradorNombre=ev["elaboradorNombre"],
             )
             for ev in evidencias
         ]
