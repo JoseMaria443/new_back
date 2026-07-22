@@ -22,8 +22,11 @@ class TareaCreateRequest(BaseModel):
     resumenActividad: str = Field(..., max_length=255, description="Resumen breve de la actividad")
     descripcion: str = Field(..., description="Descripción detallada de la tarea")
     fechaEntrega: datetime = Field(..., description="Fecha y hora de compromiso de entrega")
-    responsables: List[ResponsableIn] = Field(
-        ..., min_items=1, description="Lista de responsables asignados"
+    responsables: List[UUID] = Field(
+        ..., min_items=1, description="Lista de UUIDs de los responsables asignados"
+    )
+    colaboradores: List[UUID] = Field(
+        default_factory=list, description="Lista de UUIDs de los colaboradores de apoyo"
     )
 
     @field_validator("resumenActividad", "descripcion")

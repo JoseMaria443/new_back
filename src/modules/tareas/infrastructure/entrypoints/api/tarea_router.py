@@ -103,7 +103,8 @@ async def create_tarea(
             resumenActividad=request.resumenActividad,
             descripcion=request.descripcion,
             fechaEntrega=request.fechaEntrega,
-            responsables=[r.model_dump() for r in request.responsables],
+            responsables=request.responsables,
+            colaboradores=request.colaboradores,
         )
         return _to_response(tarea, estado_tarea_repository)
     except (BusinessRuleViolationError, ValueError) as e:
