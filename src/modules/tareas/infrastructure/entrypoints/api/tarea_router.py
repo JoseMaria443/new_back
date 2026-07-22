@@ -15,6 +15,7 @@ from ....infrastructure.persistence import TareaRepositoryAdapter
 from ....application.dtos import (
     TareaCreateRequest,
     TareaResponse,
+    ResponsableResponse,
 )
 from ....application.use_cases import CreateTareaUseCase, TransicionEstadoTareaUseCase
 
