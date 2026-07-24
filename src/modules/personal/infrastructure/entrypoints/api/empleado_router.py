@@ -281,7 +281,7 @@ async def toggle_empleado_status(
     """
     # 1. RBAC (Control de Acceso)
     cargos = current_user.get("cargos_nombres", [])
-    if not any(role in ["Administrador", "Director"] for role in cargos):
+    if not any("Administrador" in role or "Director" in role for role in cargos):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes los permisos requeridos (Administrador o Director) para alterar el estatus de un empleado."
