@@ -5,7 +5,7 @@ Endpoints: /api/empleado (login, create) y /api/empleado/{id}/estatus
 from uuid import UUID
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 from ....domain.entities import Empleado
 from ....domain.ports import EmpleadoRepository
