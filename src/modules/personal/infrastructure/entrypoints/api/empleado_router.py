@@ -210,3 +210,112 @@ async def update_empleado_estatus(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+class ToggleStatusRequest(BaseModel):
+    """Request para cambiar de estatus a un empleado."""
+    id_administrador: Optional[UUID] = None
+
+
+class HistorialEstatusResponse(BaseModel):
+    """Response con datos de historial de estatus."""
+    id: str
+    idEmpleadoAfectado: str
+    idEmpleadoModifica: str
+    accion: str
+    fechaRegistro: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmpleadoDetalleResponse(BaseModel):
+    """Response con detalle de empleado e historial de estatus."""
+    id: str
+    nombre: str
+    email: str
+    idArea: str
+    activo: bool
+    historial: List[HistorialEstatusResponse] = []
+
+
+@router.patch("/{empleado_id}/toggle-status", response_model=EmpleadoResponse)
+async def toggle_empleado_status(
+    empleado_id: UUID,
+    request_data: Optional[ToggleStatusRequest] = None,
+    id_administrador: Optional[UUID] = None,
+    current_user: dict = Depends(get_current_active_user),
+    repository: EmpleadoRepository = Depends(get_empleado_repository),
+) -> EmpleadoResponse:
+    """
+    Invierte el valor de activo del empleado y registra la acción en HISTORIAL_ESTATUS.
+    """
+    admin_id = None
+    if request_data and request_data.id_administrador:
+        admin_id = request_data.id_administrador
+    elif id_administrador:
+        admin_id = id_administrador
+    else:
+        admin_id = UUID(current_user["idEmpleado"])
+
+    empleado = repository.get_by_id(empleado_id)
+    if empleado is None:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+
+    nuevo_activo = not empleado.activo
+
+    try:
+        repository.update_estatus(
+            id=empleado_id,
+            activo=nuevo_activo,
+            idEmpleadoModifica=admin_id,
+        )
+        
+        updated_emp = repository.get_by_id(empleado_id)
+        return EmpleadoResponse(
+            id=str(updated_emp.id),
+            nombre=updated_emp.nombre,
+            email=updated_emp.email,
+            idArea=str(updated_emp.idArea),
+            activo=updated_emp.activo,
+        )
+    except BusinessRuleViolationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.get("/{empleado_id}", response_model=EmpleadoDetalleResponse)
+async def get_empleado_detalle(
+    empleado_id: UUID,
+    current_user: dict = Depends(get_current_active_user),
+    repository: EmpleadoRepository = Depends(get_empleado_repository),
+) -> EmpleadoDetalleResponse:
+    """
+    Obtiene el detalle de un empleado con su historial de estatus ordenado desc.
+    """
+    empleado = repository.get_by_id(empleado_id)
+    if empleado is None:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+
+    from modules.personal.infrastructure.persistence import HistorialEstatusRepositoryAdapter
+    historial_repo = HistorialEstatusRepositoryAdapter()
+    historial_items = historial_repo.get_by_empleado(empleado_id)
+
+    return EmpleadoDetalleResponse(
+        id=str(empleado.id),
+        nombre=empleado.nombre,
+        email=empleado.email,
+        idArea=str(empleado.idArea),
+        activo=empleado.activo,
+        historial=[
+            HistorialEstatusResponse(
+                id=str(item.id),
+                idEmpleadoAfectado=str(item.idEmpleadoAfectado),
+                idEmpleadoModifica=str(item.idEmpleadoModifica),
+                accion=item.accion.value,
+                fechaRegistro=str(item.fechaRegistro) if item.fechaRegistro is not None else None,
+            )
+            for item in historial_items
+        ]
+    )

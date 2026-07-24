@@ -71,11 +71,7 @@ class CreateEmpleadoUseCase:
                         f"El cargo '{cargo.nombre}' está archivado y no puede ser asignada a un empleado"
                     )
         
-        if acceso_sistema:
-            if not password or not password.strip():
-                raise BusinessRuleViolationError(
-                    "La contraseña es requerida cuando el acceso al sistema está habilitado"
-                )
+        if password and password.strip():
             password_hash = get_password_hash(password)
         else:
             password_hash = None
@@ -85,6 +81,7 @@ class CreateEmpleadoUseCase:
             email=email,
             idArea=idArea,
             password_hash=password_hash,
+            activo=True,
         )
         
         saved = self._repository.add_with_cargos(empleado, cargos)

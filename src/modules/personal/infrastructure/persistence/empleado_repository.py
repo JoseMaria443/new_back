@@ -498,7 +498,11 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
                 self.table.c.idEmpleadoModifica,
                 self.table.c.accion,
                 self.table.c.fechaRegistro,
-            ).where(self.table.c.idEmpleadoAfectado == idEmpleado)
+            ).where(
+                self.table.c.idEmpleadoAfectado == idEmpleado
+            ).order_by(
+                self.table.c.fechaRegistro.desc()
+            )
             
             result = session.execute(stmt)
             rows = result.fetchall()
