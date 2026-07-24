@@ -60,6 +60,7 @@ class LoginEmpleadoUseCase:
             "cargos_nombres": cargos_nombres,
         }
         
+        print(f"DEBUG LOGIN PAYLOAD: {token_data}")
         access_token = create_access_token(data=token_data)
         
         return {

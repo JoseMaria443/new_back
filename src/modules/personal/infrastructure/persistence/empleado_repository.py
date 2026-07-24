@@ -372,7 +372,14 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
             result = session.execute(stmt)
             rows = result.fetchall()
             
-            return [row.idCargo for row in rows]
+            results = []
+            for row in rows:
+                id_c = getattr(row, "idCargo", None)
+                if id_c is None:
+                    id_c = getattr(row, "idcargo", None)
+                if id_c is not None:
+                    results.append(id_c)
+            return results
 
 
 class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
