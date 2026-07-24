@@ -382,6 +382,16 @@ class EmpleadoRepositoryAdapter(EmpleadoRepository):
             return results
 
 
+def _get_row_fecha(row) -> Any:
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row.get("fechaRegistro") or row.get("fecharegistro") or row.get("fecha_registro")
+    if hasattr(row, "_mapping"):
+        return row._mapping.get("fechaRegistro") or row._mapping.get("fecharegistro") or row._mapping.get("fecha_registro")
+    return getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
+
+
 class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
     """
     Implementación concreta del repositorio de Historial de Estatus.
@@ -422,11 +432,13 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
     def add(self, historial: HistorialEstatus) -> HistorialEstatus:
         """Agrega un registro de historial y retorna la entidad persistida."""
         with self._get_session() as session:
+            from datetime import datetime, timezone
             stmt = insert(self.table).values(
                 idHistorial=historial.id,
                 idEmpleadoAfectado=historial.idEmpleadoAfectado,
                 idEmpleadoModifica=historial.idEmpleadoModifica,
                 accion=historial.accion.value,
+                fechaRegistro=datetime.now(timezone.utc),
             ).returning(
                 self.table.c.idHistorial,
                 self.table.c.idEmpleadoAfectado,
@@ -438,7 +450,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             result = session.execute(stmt)
             row = result.fetchone()
             
-            fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
+            fecha_reg = _get_row_fecha(row)
             
             return HistorialEstatus(
                 id=row.idHistorial,
@@ -465,7 +477,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             if row is None:
                 return None
             
-            fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
+            fecha_reg = _get_row_fecha(row)
             
             return HistorialEstatus(
                 id=row.idHistorial,
@@ -491,7 +503,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             
             results = []
             for row in rows:
-                fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
+                fecha_reg = _get_row_fecha(row)
                 results.append(
                     HistorialEstatus(
                         id=row.idHistorial,
@@ -523,7 +535,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             
             results = []
             for row in rows:
-                fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
+                fecha_reg = _get_row_fecha(row)
                 results.append(
                     HistorialEstatus(
                         id=row.idHistorial,
