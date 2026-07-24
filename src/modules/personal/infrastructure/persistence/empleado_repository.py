@@ -3,7 +3,7 @@ Adaptador de persistencia para el repositorio de Empleados.
 Usa SQLAlchemy Core con SQL crudo.
 """
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
 from contextlib import contextmanager
 
