@@ -63,6 +63,7 @@ class EmpleadoResponse(BaseModel):
     email: str
     idArea: str
     activo: bool
+    cargos: List[str] = []
 
 
 def get_empleado_repository() -> EmpleadoRepository:
@@ -122,16 +123,26 @@ async def list_empleados(
     else:
         empleados = repository.get_all()
         
-    return [
-        EmpleadoResponse(
-            id=str(emp.id),
-            nombre=emp.nombre,
-            email=emp.email,
-            idArea=str(emp.idArea),
-            activo=emp.activo,
+    cargo_repo = CargoRepositoryAdapter()
+    res = []
+    for emp in empleados:
+        cargo_ids = repository.get_cargos(emp.id)
+        cargo_nombres = []
+        for c_id in cargo_ids:
+            c = cargo_repo.get_by_id(c_id)
+            if c:
+                cargo_nombres.append(c.nombre)
+        res.append(
+            EmpleadoResponse(
+                id=str(emp.id),
+                nombre=emp.nombre,
+                email=emp.email,
+                idArea=str(emp.idArea),
+                activo=emp.activo,
+                cargos=cargo_nombres,
+            )
         )
-        for emp in empleados
-    ]
+    return res
 
 
 @router.post("/", response_model=EmpleadoResponse, status_code=201)
@@ -159,12 +170,20 @@ async def create_empleado(
             acceso_sistema=request.acceso_sistema,
         )
         
+        cargo_ids = repository.get_cargos(empleado.id)
+        cargo_nombres = []
+        for c_id in cargo_ids:
+            c = cargo_repository.get_by_id(c_id)
+            if c:
+                cargo_nombres.append(c.nombre)
+
         return EmpleadoResponse(
             id=str(empleado.id),
             nombre=empleado.nombre,
             email=empleado.email,
             idArea=str(empleado.idArea),
             activo=empleado.activo,
+            cargos=cargo_nombres,
         )
     except BusinessRuleViolationError as e:
         raise HTTPException(
@@ -198,12 +217,21 @@ async def update_empleado_estatus(
         # Obtener el empleado actualizado
         empleado = repository.get_by_id(empleado_id)
         
+        cargo_ids = repository.get_cargos(empleado.id)
+        cargo_nombres = []
+        cargo_repo = CargoRepositoryAdapter()
+        for c_id in cargo_ids:
+            c = cargo_repo.get_by_id(c_id)
+            if c:
+                cargo_nombres.append(c.nombre)
+
         return EmpleadoResponse(
             id=str(empleado.id),
             nombre=empleado.nombre,
             email=empleado.email,
             idArea=str(empleado.idArea),
             activo=empleado.activo,
+            cargos=cargo_nombres,
         )
     except BusinessRuleViolationError as e:
         raise HTTPException(
@@ -224,6 +252,7 @@ class HistorialEstatusResponse(BaseModel):
     idEmpleadoModifica: str
     accion: str
     fechaRegistro: Optional[str] = None
+    modifierNombre: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -235,6 +264,7 @@ class EmpleadoDetalleResponse(BaseModel):
     email: str
     idArea: str
     activo: bool
+    cargos: List[str] = []
     historial: List[HistorialEstatusResponse] = []
 
 
@@ -271,12 +301,20 @@ async def toggle_empleado_status(
         )
         
         updated_emp = repository.get_by_id(empleado_id)
+        cargo_ids = repository.get_cargos(empleado_id)
+        cargo_nombres = []
+        cargo_repo = CargoRepositoryAdapter()
+        for c_id in cargo_ids:
+            c = cargo_repo.get_by_id(c_id)
+            if c:
+                cargo_nombres.append(c.nombre)
         return EmpleadoResponse(
             id=str(updated_emp.id),
             nombre=updated_emp.nombre,
             email=updated_emp.email,
             idArea=str(updated_emp.idArea),
             activo=updated_emp.activo,
+            cargos=cargo_nombres,
         )
     except BusinessRuleViolationError as e:
         raise HTTPException(
@@ -290,6 +328,7 @@ async def get_empleado_detalle(
     empleado_id: UUID,
     current_user: dict = Depends(get_current_active_user),
     repository: EmpleadoRepository = Depends(get_empleado_repository),
+    cargo_repository: CargoRepository = Depends(get_cargo_repository),
 ) -> EmpleadoDetalleResponse:
     """
     Obtiene el detalle de un empleado con su historial de estatus ordenado desc.
@@ -297,6 +336,13 @@ async def get_empleado_detalle(
     empleado = repository.get_by_id(empleado_id)
     if empleado is None:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
+
+    cargo_ids = repository.get_cargos(empleado_id)
+    cargo_nombres = []
+    for c_id in cargo_ids:
+        c = cargo_repository.get_by_id(c_id)
+        if c:
+            cargo_nombres.append(c.nombre)
 
     from modules.personal.infrastructure.persistence import HistorialEstatusRepositoryAdapter
     historial_repo = HistorialEstatusRepositoryAdapter()
@@ -308,6 +354,7 @@ async def get_empleado_detalle(
         email=empleado.email,
         idArea=str(empleado.idArea),
         activo=empleado.activo,
+        cargos=cargo_nombres,
         historial=[
             HistorialEstatusResponse(
                 id=str(item.id),
@@ -315,6 +362,7 @@ async def get_empleado_detalle(
                 idEmpleadoModifica=str(item.idEmpleadoModifica),
                 accion=item.accion.value,
                 fechaRegistro=str(item.fechaRegistro) if item.fechaRegistro is not None else None,
+                modifierNombre=repository.get_by_id(item.idEmpleadoModifica).nombre if repository.get_by_id(item.idEmpleadoModifica) else "Usuario Desconocido"
             )
             for item in historial_items
         ]
