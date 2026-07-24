@@ -431,12 +431,16 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             result = session.execute(stmt)
             row = result.fetchone()
             
+            fecha_reg = getattr(row, "fechaRegistro", None)
+            if fecha_reg is None:
+                fecha_reg = getattr(row, "fecharegistro", None)
+            
             return HistorialEstatus(
                 id=row.idHistorial,
                 idEmpleadoAfectado=row.idEmpleadoAfectado,
                 idEmpleadoModifica=row.idEmpleadoModifica,
                 accion=AccionHistorial(row.accion),
-                fechaRegistro=row.fechaRegistro,
+                fechaRegistro=fecha_reg,
             )
     
     def get_by_id(self, id: UUID) -> Optional[HistorialEstatus]:
@@ -456,12 +460,16 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             if row is None:
                 return None
             
+            fecha_reg = getattr(row, "fechaRegistro", None)
+            if fecha_reg is None:
+                fecha_reg = getattr(row, "fecharegistro", None)
+            
             return HistorialEstatus(
                 id=row.idHistorial,
                 idEmpleadoAfectado=row.idEmpleadoAfectado,
                 idEmpleadoModifica=row.idEmpleadoModifica,
                 accion=AccionHistorial(row.accion),
-                fechaRegistro=row.fechaRegistro,
+                fechaRegistro=fecha_reg,
             )
     
     def get_all(self) -> List[HistorialEstatus]:
@@ -478,16 +486,21 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             result = session.execute(stmt)
             rows = result.fetchall()
             
-            return [
-                HistorialEstatus(
-                    id=row.idHistorial,
-                    idEmpleadoAfectado=row.idEmpleadoAfectado,
-                    idEmpleadoModifica=row.idEmpleadoModifica,
-                    accion=AccionHistorial(row.accion),
-                    fechaRegistro=row.fechaRegistro,
+            results = []
+            for row in rows:
+                fecha_reg = getattr(row, "fechaRegistro", None)
+                if fecha_reg is None:
+                    fecha_reg = getattr(row, "fecharegistro", None)
+                results.append(
+                    HistorialEstatus(
+                        id=row.idHistorial,
+                        idEmpleadoAfectado=row.idEmpleadoAfectado,
+                        idEmpleadoModifica=row.idEmpleadoModifica,
+                        accion=AccionHistorial(row.accion),
+                        fechaRegistro=fecha_reg,
+                    )
                 )
-                for row in rows
-            ]
+            return results
     
     def get_by_empleado(self, idEmpleado: UUID) -> List[HistorialEstatus]:
         """Obtiene el historial de estatus de un empleado."""
@@ -507,13 +520,18 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             result = session.execute(stmt)
             rows = result.fetchall()
             
-            return [
-                HistorialEstatus(
-                    id=row.idHistorial,
-                    idEmpleadoAfectado=row.idEmpleadoAfectado,
-                    idEmpleadoModifica=row.idEmpleadoModifica,
-                    accion=AccionHistorial(row.accion),
-                    fechaRegistro=row.fechaRegistro,
+            results = []
+            for row in rows:
+                fecha_reg = getattr(row, "fechaRegistro", None)
+                if fecha_reg is None:
+                    fecha_reg = getattr(row, "fecharegistro", None)
+                results.append(
+                    HistorialEstatus(
+                        id=row.idHistorial,
+                        idEmpleadoAfectado=row.idEmpleadoAfectado,
+                        idEmpleadoModifica=row.idEmpleadoModifica,
+                        accion=AccionHistorial(row.accion),
+                        fechaRegistro=fecha_reg,
+                    )
                 )
-                for row in rows
-            ]
+            return results

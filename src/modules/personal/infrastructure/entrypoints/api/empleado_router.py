@@ -279,13 +279,29 @@ async def toggle_empleado_status(
     """
     Invierte el valor de activo del empleado y registra la acción en HISTORIAL_ESTATUS.
     """
+    # 1. RBAC (Control de Acceso)
+    cargos = current_user.get("cargos_nombres", [])
+    if not any(role in ["Administrador", "Director"] for role in cargos):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes los permisos requeridos (Administrador o Director) para alterar el estatus de un empleado."
+        )
+
+    # 2. Prevención de Auto-desactivación
+    id_empleado_actual = UUID(current_user["idEmpleado"])
+    if empleado_id == id_empleado_actual:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes alterar tu propio estatus"
+        )
+
     admin_id = None
     if request_data and request_data.id_administrador:
         admin_id = request_data.id_administrador
     elif id_administrador:
         admin_id = id_administrador
     else:
-        admin_id = UUID(current_user["idEmpleado"])
+        admin_id = id_empleado_actual
 
     empleado = repository.get_by_id(empleado_id)
     if empleado is None:
@@ -361,7 +377,7 @@ async def get_empleado_detalle(
                 idEmpleadoAfectado=str(item.idEmpleadoAfectado),
                 idEmpleadoModifica=str(item.idEmpleadoModifica),
                 accion=item.accion.value,
-                fechaRegistro=str(item.fechaRegistro) if item.fechaRegistro is not None else None,
+                fechaRegistro=item.fechaRegistro.isoformat() if hasattr(item.fechaRegistro, "isoformat") else str(item.fechaRegistro) if item.fechaRegistro is not None else None,
                 modifierNombre=repository.get_by_id(item.idEmpleadoModifica).nombre if repository.get_by_id(item.idEmpleadoModifica) else "Usuario Desconocido"
             )
             for item in historial_items

@@ -105,13 +105,26 @@ async def get_current_active_user(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
-    Dependencia que verifica que el usuario esté activo.
+    Dependencia que verifica que el usuario esté activo consultando la base de datos.
     """
-    # El campo 'activo' viene en el token
-    if not current_user.get("activo", True):
+    from uuid import UUID
+    from modules.personal.infrastructure.persistence import EmpleadoRepositoryAdapter
+
+    id_empleado = current_user.get("idEmpleado")
+    if not id_empleado:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuario desactivado"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token no contiene id de empleado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    repo = EmpleadoRepositoryAdapter()
+    empleado = repo.get_by_id(UUID(id_empleado))
+    if empleado is None or not empleado.activo:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario inactivo o no encontrado",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     return current_user
 
