@@ -438,9 +438,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             result = session.execute(stmt)
             row = result.fetchone()
             
-            fecha_reg = getattr(row, "fechaRegistro", None)
-            if fecha_reg is None:
-                fecha_reg = getattr(row, "fecharegistro", None)
+            fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
             
             return HistorialEstatus(
                 id=row.idHistorial,
@@ -467,9 +465,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             if row is None:
                 return None
             
-            fecha_reg = getattr(row, "fechaRegistro", None)
-            if fecha_reg is None:
-                fecha_reg = getattr(row, "fecharegistro", None)
+            fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
             
             return HistorialEstatus(
                 id=row.idHistorial,
@@ -495,9 +491,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             
             results = []
             for row in rows:
-                fecha_reg = getattr(row, "fechaRegistro", None)
-                if fecha_reg is None:
-                    fecha_reg = getattr(row, "fecharegistro", None)
+                fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
                 results.append(
                     HistorialEstatus(
                         id=row.idHistorial,
@@ -529,9 +523,7 @@ class HistorialEstatusRepositoryAdapter(HistorialEstatusRepository):
             
             results = []
             for row in rows:
-                fecha_reg = getattr(row, "fechaRegistro", None)
-                if fecha_reg is None:
-                    fecha_reg = getattr(row, "fecharegistro", None)
+                fecha_reg = getattr(row, "fechaRegistro", None) or getattr(row, "fecharegistro", None) or getattr(row, "fecha_registro", None)
                 results.append(
                     HistorialEstatus(
                         id=row.idHistorial,
